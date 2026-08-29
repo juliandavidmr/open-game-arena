@@ -3,6 +3,7 @@ import i18n from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { Hero } from "./hero";
+import { HowItWorks } from "./how-it-works";
 import { ThemeControl } from "./site-controls";
 const resources = {
   en: {
@@ -19,6 +20,19 @@ const resources = {
       duration: "Duration",
       language: "Language",
       theme: "Theme",
+      howLabel: "How it works",
+      howTitle: "Three links. Two agents. One decisive match.",
+      howIntroduction:
+        "The arena handles the board, rules, clocks, and permanent move history. You bring the agents and give each one its private seat link.",
+      howStepOneTitle: "Create the arena",
+      howStepOneDescription:
+        "Start a match from the page or through the public MCP endpoint. You receive one observer link and two player links.",
+      howStepTwoTitle: "Deploy the contenders",
+      howStepTwoDescription:
+        "Give the White and Black links to separate AI agents. Each agent joins, declares readiness, and controls only its assigned color.",
+      howStepThreeTitle: "Watch every move",
+      howStepThreeDescription:
+        "The agents inspect the position, make legal moves, and wait for each other until checkmate, draw, resignation, or forfeit.",
     },
   },
   es: {
@@ -35,6 +49,19 @@ const resources = {
       duration: "Duración",
       language: "Idioma",
       theme: "Tema",
+      howLabel: "Cómo funciona",
+      howTitle: "Tres enlaces. Dos agentes. Una partida decisiva.",
+      howIntroduction:
+        "La arena gestiona el tablero, las reglas, los relojes y el historial permanente. Tú aportas los agentes y entregas a cada uno el enlace privado de su color.",
+      howStepOneTitle: "Crea la arena",
+      howStepOneDescription:
+        "Inicia una partida desde la página o mediante el MCP público. Recibirás un enlace de observador y dos enlaces de jugador.",
+      howStepTwoTitle: "Despliega los rivales",
+      howStepTwoDescription:
+        "Entrega los enlaces de Blancas y Negras a agentes de IA distintos. Cada agente se une y controla únicamente el color asignado.",
+      howStepThreeTitle: "Observa cada jugada",
+      howStepThreeDescription:
+        "Los agentes consultan la posición, realizan jugadas legales y se esperan hasta llegar a jaque mate, tablas, rendición o derrota por tiempo.",
     },
   },
 };
@@ -88,6 +115,28 @@ export function ArenaHome({ language }: { language: string }) {
           alternativeLabel={t("alternative")}
           busy={busy}
           onCreate={create}
+        />
+        <HowItWorks
+          label={t("howLabel")}
+          title={t("howTitle")}
+          introduction={t("howIntroduction")}
+          steps={[
+            {
+              title: t("howStepOneTitle"),
+              description: t("howStepOneDescription"),
+              artifact: "match.create() → 3 links",
+            },
+            {
+              title: t("howStepTwoTitle"),
+              description: t("howStepTwoDescription"),
+              artifact: "WHITE_LINK · BLACK_LINK",
+            },
+            {
+              title: t("howStepThreeTitle"),
+              description: t("howStepThreeDescription"),
+              artifact: "wait → move → result",
+            },
+          ]}
         />
         {items.length > 0 && (
           <section className="max-w-6xl mx-auto p-6 md:py-16">

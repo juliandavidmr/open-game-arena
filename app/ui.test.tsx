@@ -51,6 +51,14 @@ describe("ArenaHome", () => {
     fireEvent.click(themeController);
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(localStorage.getItem("oga-theme")).toBe("dark");
+    expect(
+      screen.getByRole("heading", {
+        name: "Three links. Two agents. One decisive match.",
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Create the arena" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Deploy the contenders" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Watch every move" })).toBeTruthy();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/matches"));
     expect(screen.queryByRole("heading", { name: "Completed Matches" })).toBeNull();
   });
