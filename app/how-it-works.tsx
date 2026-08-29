@@ -1,3 +1,5 @@
+import { CreateMatchCta } from "./hero";
+
 type Step = {
   title: string;
   description: string;
@@ -9,9 +11,20 @@ type HowItWorksProps = {
   title: string;
   introduction: string;
   steps: readonly Step[];
+  ctaLabel: string;
+  busy: boolean;
+  onCreate: () => void;
 };
 
-export function HowItWorks({ label, title, introduction, steps }: HowItWorksProps) {
+export function HowItWorks({
+  label,
+  title,
+  introduction,
+  steps,
+  ctaLabel,
+  busy,
+  onCreate,
+}: HowItWorksProps) {
   return (
     <section className="bg-base-200 text-base-content" aria-labelledby="how-it-works-title">
       <div className="mx-auto max-w-6xl px-6 py-18 md:py-24 lg:py-28">
@@ -47,6 +60,10 @@ export function HowItWorks({ label, title, introduction, steps }: HowItWorksProp
             </li>
           ))}
         </ol>
+
+        <div className="mt-12 flex justify-center lg:mt-16">
+          <CreateMatchCta label={ctaLabel} busy={busy} onCreate={onCreate} />
+        </div>
       </div>
     </section>
   );

@@ -1,16 +1,31 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 export const alt = "Open Game Arena — autonomous AI chess matches";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OpenGraphImage() {
+// ImageResponse renders through Satori without loading app/globals.css, so Tailwind and DaisyUI
+// classes are unavailable here. These semantic colors mirror the app's DaisyUI light theme.
+const theme = {
+  base100: "#ffffff",
+  base200: "#f2f3f7",
+  baseContent: "#18181b",
+  primary: "#4b32d1",
+  primaryContent: "#ffffff",
+};
+
+export default async function OpenGraphImage() {
+  const mark = await readFile(join(process.cwd(), "public/brand/open-game-arena-mark.png"));
+  const markSource = `data:image/png;base64,${mark.toString("base64")}`;
+
   return new ImageResponse(
     <div
       style={{
         alignItems: "center",
-        background: "#11120f",
-        color: "#f7f4e9",
+        background: theme.base200,
+        color: theme.baseContent,
         display: "flex",
         height: "100%",
         justifyContent: "center",
@@ -21,8 +36,7 @@ export default function OpenGraphImage() {
     >
       <div
         style={{
-          background:
-            "linear-gradient(135deg, rgba(188, 255, 55, 0.22), rgba(188, 255, 55, 0) 60%)",
+          background: `linear-gradient(135deg, ${theme.primary}33, transparent 60%)`,
           display: "flex",
           inset: 0,
           position: "absolute",
@@ -30,7 +44,8 @@ export default function OpenGraphImage() {
       />
       <div
         style={{
-          border: "2px solid rgba(247, 244, 233, 0.18)",
+          background: theme.base100,
+          border: `2px solid ${theme.primary}33`,
           display: "flex",
           flexDirection: "column",
           height: 510,
@@ -40,8 +55,23 @@ export default function OpenGraphImage() {
           width: 1080,
         }}
       >
-        <div style={{ color: "#bcff37", display: "flex", fontSize: 24, letterSpacing: 6 }}>
-          THE AUTONOMOUS AI CHESS ARENA
+        <div
+          style={{
+            alignItems: "center",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <img
+            alt=""
+            height={112}
+            src={markSource}
+            style={{ objectFit: "contain" }}
+            width={112}
+          />
+          <div style={{ color: theme.primary, display: "flex", fontSize: 24, letterSpacing: 6 }}>
+            THE AUTONOMOUS AI CHESS ARENA
+          </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", fontSize: 88, fontWeight: 900, letterSpacing: -4 }}>
@@ -49,7 +79,7 @@ export default function OpenGraphImage() {
           </div>
           <div
             style={{
-              color: "#bcff37",
+              color: theme.primary,
               display: "flex",
               fontSize: 128,
               fontWeight: 900,

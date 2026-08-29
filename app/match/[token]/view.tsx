@@ -3,6 +3,93 @@
 import { Chess } from "chess.js";
 import { useEffect, useState } from "react";
 
+type Language = "en" | "es";
+
+const translations = {
+  en: {
+    breadcrumb: "Breadcrumb",
+    deleteConfirm: "Delete this incomplete Match permanently?",
+    deleteMatch: "Delete match",
+    whiteAgent: "White AI agent",
+    blackAgent: "Black AI agent",
+    liveHeading: "AI chess match",
+    completedSummary:
+      "Replay this autonomous AI chess match and inspect its complete public move record.",
+    liveSummary: "Live position, agent access, and the complete move record in one place.",
+    revision: "Revision",
+    position: "Position",
+    startMatch: "Start the match",
+    showPrompts: "Show prompts",
+    hidePrompts: "Hide prompts",
+    startDescription:
+      "Copy each complete prompt and paste it into a separate AI agent. The private player URL is already included.",
+    playAs: (color: string) => `Play as ${color}`,
+    noAgent: "No agent connected",
+    ready: "Ready",
+    waiting: "Waiting",
+    completePrompt: "Complete agent prompt",
+    promptCopied: (agent: string) => `Agent ${agent} prompt copied`,
+    copyPrompt: (agent: string) => `Copy Agent ${agent} prompt`,
+    livePosition: "Live position",
+    autoUpdating: "Auto-updating",
+    moves: (count: number) => `${count} MOVES`,
+    controls: "Match controls and activity",
+    agents: "Agents",
+    seats: "2 seats",
+    timeline: "Timeline",
+    shown: (count: number) => `${count} shown`,
+    noMoves: "No moves yet",
+    timelineStarts: "The timeline starts when both agents are ready.",
+    toMove: (color: string) => `${color} to move`,
+    colors: { white: "White", black: "Black" },
+    lifecycle: { waiting: "Waiting", active: "Active", completed: "Completed" },
+    draw: "Draw",
+    agentPrompt: (agent: string, color: string, link: string) =>
+      `You are Agent ${agent}, playing ${color} in an autonomous chess match. Connect to the Open Game Arena MCP server at ${link}. Explore the available tools, call game.get_info, join the match, and keep calling game.wait_for_turn. When it is your turn, make a legal move. Continue until the match reaches a terminal state.`,
+  },
+  es: {
+    breadcrumb: "Migas de pan",
+    deleteConfirm: "¿Eliminar esta partida incompleta permanentemente?",
+    deleteMatch: "Eliminar partida",
+    whiteAgent: "Agente IA de blancas",
+    blackAgent: "Agente IA de negras",
+    liveHeading: "Partida de ajedrez con IA",
+    completedSummary:
+      "Reproduce esta partida autónoma de ajedrez con IA y consulta su historial público completo.",
+    liveSummary: "Posición en vivo, acceso de agentes e historial completo en un solo lugar.",
+    revision: "Revisión",
+    position: "Posición",
+    startMatch: "Iniciar la partida",
+    showPrompts: "Mostrar prompts",
+    hidePrompts: "Ocultar prompts",
+    startDescription:
+      "Copia cada prompt completo y pégalo en un agente de IA distinto. La URL privada del jugador ya está incluida.",
+    playAs: (color: string) => `Jugar con ${color}`,
+    noAgent: "Ningún agente conectado",
+    ready: "Listo",
+    waiting: "Esperando",
+    completePrompt: "Prompt completo del agente",
+    promptCopied: (agent: string) => `Prompt del Agente ${agent} copiado`,
+    copyPrompt: (agent: string) => `Copiar prompt del Agente ${agent}`,
+    livePosition: "Posición en vivo",
+    autoUpdating: "Actualización automática",
+    moves: (count: number) => `${count} JUGADAS`,
+    controls: "Controles y actividad de la partida",
+    agents: "Agentes",
+    seats: "2 colores",
+    timeline: "Cronología",
+    shown: (count: number) => `${count} visibles`,
+    noMoves: "Aún no hay jugadas",
+    timelineStarts: "La cronología comienza cuando ambos agentes están listos.",
+    toMove: (color: string) => `Juegan ${color}`,
+    colors: { white: "Blancas", black: "Negras" },
+    lifecycle: { waiting: "Esperando", active: "Activa", completed: "Completada" },
+    draw: "Tablas",
+    agentPrompt: (agent: string, color: string, link: string) =>
+      `Eres el Agente ${agent} y juegas con ${color} en una partida autónoma de ajedrez. Conéctate al servidor MCP de Open Game Arena en ${link}. Explora las herramientas disponibles, llama a game.get_info, únete a la partida y sigue llamando a game.wait_for_turn. Cuando sea tu turno, realiza una jugada legal. Continúa hasta que la partida alcance un estado final.`,
+  },
+} as const;
+
 const pieces: Record<string, string> = {
   wp: "♙",
   wr: "♖",
@@ -51,13 +138,18 @@ function lifecycleBadge(lifecycle: string) {
   return "badge-primary";
 }
 
-function agentPrompt(agent: string, color: string, link: string) {
-  return `You are Agent ${agent}, playing ${color} in an autonomous chess match. Connect to the Open Game Arena MCP server at ${link}. Explore the available tools, call game.get_info, join the match, and keep calling game.wait_for_turn. When it is your turn, make a legal move. Continue until the match reaches a terminal state.`;
-}
-
-export function MatchView({ token, initial }: { token: string; initial: any }) {
+export function MatchView({
+  token,
+  initial,
+  language = "en",
+}: {
+  token: string;
+  initial: any;
+  language?: Language;
+}) {
   const [state, setState] = useState(initial);
   const [copiedSeat, setCopiedSeat] = useState<string | null>(null);
+  const text = translations[language];
 
   useEffect(() => {
     if (state.lifecycle === "completed") return;
@@ -92,7 +184,7 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
   }
 
   async function deleteMatch() {
-    if (confirm("Delete this incomplete Match permanently?")) {
+    if (confirm(text.deleteConfirm)) {
       const response = await fetch(`/api/matches/${token}`, { method: "DELETE" });
       if (response.ok) location.href = "/";
     }
@@ -102,27 +194,28 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
     typeof window === "undefined"
       ? (process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000")
       : location.origin;
-  const currentOutcome = state.result ?? `${state.turn} to move`;
+  const currentOutcome = state.result
+    ? state.result === "draw"
+      ? text.draw
+      : text.colors[state.result as "white" | "black"]
+    : text.toMove(text.colors[state.turn as "white" | "black"]);
   const setupComplete = ["white", "black"].every(
     (color) =>
       state.readiness[color] && state.profiles.some((profile: any) => profile.color === color),
   );
   const whiteAgent =
     state.profiles.find((profile: any) => profile.color === "white")?.client_name ??
-    "White AI agent";
+    text.whiteAgent;
   const blackAgent =
     state.profiles.find((profile: any) => profile.color === "black")?.client_name ??
-    "Black AI agent";
+    text.blackAgent;
   const matchHeading =
-    state.lifecycle === "completed" ? `${whiteAgent} vs ${blackAgent}` : "AI chess match";
-  const matchSummary =
-    state.lifecycle === "completed"
-      ? "Replay this autonomous AI chess match and inspect its complete public move record."
-      : "Live position, agent access, and the complete move record in one place.";
+    state.lifecycle === "completed" ? `${whiteAgent} vs ${blackAgent}` : text.liveHeading;
+  const matchSummary = state.lifecycle === "completed" ? text.completedSummary : text.liveSummary;
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <nav className="mb-8" aria-label="Breadcrumb">
+      <nav className="mb-8" aria-label={text.breadcrumb}>
         <a href="/" className="link link-hover inline-flex items-center gap-2 font-semibold">
           <span aria-hidden="true">←</span>
           Open Game Arena
@@ -134,7 +227,7 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-black tracking-tight">{matchHeading}</h1>
             <span className={`badge badge-lg capitalize ${lifecycleBadge(state.lifecycle)}`}>
-              {state.lifecycle}
+              {text.lifecycle[state.lifecycle as keyof typeof text.lifecycle] ?? state.lifecycle}
             </span>
           </div>
 
@@ -143,8 +236,8 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
               type="button"
               className="btn btn-square btn-ghost shrink-0 text-base-content/55 hover:border-error hover:bg-error hover:text-error-content"
               onClick={deleteMatch}
-              aria-label="Delete match"
-              title="Delete match"
+              aria-label={text.deleteMatch}
+              title={text.deleteMatch}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -172,11 +265,11 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
 
           <dl className="flex gap-8 sm:text-right">
             <div>
-              <dt className="text-sm text-base-content/60">Revision</dt>
+              <dt className="text-sm text-base-content/60">{text.revision}</dt>
               <dd className="font-mono text-lg font-bold tabular-nums">{state.revision}</dd>
             </div>
             <div>
-              <dt className="text-sm text-base-content/60">Position</dt>
+              <dt className="text-sm text-base-content/60">{text.position}</dt>
               <dd className="text-lg font-bold capitalize">{currentOutcome}</dd>
             </div>
           </dl>
@@ -191,12 +284,12 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
             <div className="min-w-0">
               <h2 id="start-match-title" className="text-2xl font-black tracking-tight">
-                Start the match
+                {text.startMatch}
               </h2>
             </div>
             <span className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold">
-              <span className="group-open:hidden">Show prompts</span>
-              <span className="hidden group-open:inline">Hide prompts</span>
+              <span className="group-open:hidden">{text.showPrompts}</span>
+              <span className="hidden group-open:inline">{text.hidePrompts}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
@@ -213,10 +306,7 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
             </span>
           </summary>
 
-          <p className="mt-3 max-w-3xl text-primary-content/80">
-            Copy each complete prompt and paste it into a separate AI agent. The private player URL
-            is already included.
-          </p>
+          <p className="mt-3 max-w-3xl text-primary-content/80">{text.startDescription}</p>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             {[
@@ -224,7 +314,8 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
               { color: "black", agent: "B" },
             ].map(({ color, agent }) => {
               const link = `${baseUrl}/chess/${state.player_tokens[color]}`;
-              const prompt = agentPrompt(agent, color === "white" ? "White" : "Black", link);
+              const localizedColor = text.colors[color as "white" | "black"];
+              const prompt = text.agentPrompt(agent, localizedColor, link);
               const ready = state.readiness[color];
               const profile = state.profiles.find((item: any) => item.color === color);
 
@@ -239,11 +330,11 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
                         Agent {agent}
                       </span>
                       <div>
-                        <h3 className="font-extrabold capitalize">Play as {color}</h3>
+                        <h3 className="font-extrabold">{text.playAs(localizedColor)}</h3>
                         <p className="text-sm text-base-content/60">
                           {profile
                             ? `${profile.client_name}${profile.model ? ` · ${profile.model}` : ""}`
-                            : "No agent connected"}
+                            : text.noAgent}
                         </p>
                       </div>
                     </div>
@@ -252,12 +343,12 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
                         className={`status ${ready ? "status-success" : "status-warning"}`}
                         aria-hidden="true"
                       />
-                      {ready ? "Ready" : "Waiting"}
+                      {ready ? text.ready : text.waiting}
                     </span>
                   </div>
 
                   <label className="mt-5 block" htmlFor={`${color}-agent-prompt`}>
-                    <span className="mb-2 block text-sm font-semibold">Complete agent prompt</span>
+                    <span className="mb-2 block text-sm font-semibold">{text.completePrompt}</span>
                     <textarea
                       id={`${color}-agent-prompt`}
                       className="textarea h-40 w-full resize-none bg-base-200 font-mono text-xs leading-5"
@@ -271,9 +362,7 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
                     className="btn btn-primary mt-3 w-full"
                     onClick={() => copyPrompt(color, prompt)}
                   >
-                    {copiedSeat === color
-                      ? `Agent ${agent} prompt copied`
-                      : `Copy Agent ${agent} prompt`}
+                    {copiedSeat === color ? text.promptCopied(agent) : text.copyPrompt(agent)}
                   </button>
                 </article>
               );
@@ -281,7 +370,7 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
           </div>
 
           <span className="sr-only" aria-live="polite">
-            {copiedSeat ? `${copiedSeat} agent prompt copied` : ""}
+            {copiedSeat ? text.promptCopied(copiedSeat === "white" ? "A" : "B") : ""}
           </span>
         </details>
       )}
@@ -290,31 +379,31 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
         <section aria-labelledby="position-title">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h2 id="position-title" className="text-xl font-extrabold">
-              Live position
+              {text.livePosition}
             </h2>
             <span className="inline-flex items-center gap-2 text-sm font-medium text-base-content/70">
               <span className="status status-success" aria-hidden="true" />
-              Auto-updating
+              {text.autoUpdating}
             </span>
           </div>
 
           <div className="mx-auto w-full max-w-2xl">
             <Board fen={state.fen} />
             <div className="mt-3 flex items-center justify-between font-mono text-xs font-semibold text-base-content/60">
-              <span>WHITE</span>
-              <span>{state.total_move_count} MOVES</span>
-              <span>BLACK</span>
+              <span>{text.colors.white.toUpperCase()}</span>
+              <span>{text.moves(state.total_move_count)}</span>
+              <span>{text.colors.black.toUpperCase()}</span>
             </div>
           </div>
         </section>
 
-        <aside className="space-y-8" aria-label="Match controls and activity">
+        <aside className="space-y-8" aria-label={text.controls}>
           <section aria-labelledby="agents-title">
             <div className="mb-4 flex items-center justify-between gap-4">
               <h2 id="agents-title" className="text-xl font-extrabold">
-                Agents
+                {text.agents}
               </h2>
-              <span className="badge badge-ghost">2 seats</span>
+              <span className="badge badge-ghost">{text.seats}</span>
             </div>
 
             <div className="join join-vertical w-full sm:join-horizontal xl:join-vertical 2xl:join-horizontal">
@@ -328,13 +417,13 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
                     key={color}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <h3 className="font-bold capitalize">{color}</h3>
+                      <h3 className="font-bold">{text.colors[color as "white" | "black"]}</h3>
                       <span className="inline-flex items-center gap-2 text-sm font-semibold">
                         <span
                           className={`status ${ready ? "status-success" : "status-warning"}`}
                           aria-hidden="true"
                         />
-                        {ready ? "Ready" : "Waiting"}
+                        {ready ? text.ready : text.waiting}
                       </span>
                     </div>
                     {profiles.length > 0 ? (
@@ -345,7 +434,7 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
                         </p>
                       ))
                     ) : (
-                      <p className="mt-3 text-sm text-base-content/60">No agent connected</p>
+                      <p className="mt-3 text-sm text-base-content/60">{text.noAgent}</p>
                     )}
                   </div>
                 );
@@ -356,9 +445,9 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
           <section aria-labelledby="timeline-title">
             <div className="mb-4 flex items-center justify-between gap-4">
               <h2 id="timeline-title" className="text-xl font-extrabold">
-                Timeline
+                {text.timeline}
               </h2>
-              <span className="badge badge-ghost">{state.moves.length} shown</span>
+              <span className="badge badge-ghost">{text.shown(state.moves.length)}</span>
             </div>
 
             {state.moves.length > 0 ? (
@@ -379,10 +468,8 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
               </ol>
             ) : (
               <div className="border-y border-base-300 py-8 text-center">
-                <p className="font-semibold">No moves yet</p>
-                <p className="mt-1 text-sm text-base-content/65">
-                  The timeline starts when both agents are ready.
-                </p>
+                <p className="font-semibold">{text.noMoves}</p>
+                <p className="mt-1 text-sm text-base-content/65">{text.timelineStarts}</p>
               </div>
             )}
           </section>

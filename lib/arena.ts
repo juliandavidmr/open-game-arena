@@ -1,4 +1,5 @@
-import { sql } from "./db";
+import { and, desc, eq, inArray, lt } from "drizzle-orm";
+import { db, sql } from "./db";
 import {
   applyChessMove,
   INITIAL_FEN,
@@ -12,6 +13,7 @@ import {
   type Ending,
 } from "./domain";
 import { decrypt, encrypt, hash, token } from "./security";
+import { agentProfiles, matches, playerSeats } from "./schema";
 type Clock = () => Date;
 const now: Clock = () => new Date();
 export type Rejection = { accepted: false; reason: string; revision?: number; lifecycle?: string };
@@ -300,13 +302,59 @@ export async function deleteMatch(t: string) {
 }
 export async function directory(cursor?: string, limit = 20) {
   const before = cursor ? new Date(Buffer.from(cursor, "base64url").toString()) : null;
-  const rows =
-    await sql()`SELECT public_slug,completed_at,activated_at,result,ending_cause,move_count FROM matches WHERE lifecycle='completed' AND completed_at<COALESCE(${before}, 'infinity'::timestamptz) ORDER BY completed_at DESC LIMIT ${Math.min(limit, 100)}`;
+  const pageSize = Math.max(1, Math.min(limit, 100));
+  const database = db();
+  const rows = await database
+    .select({
+      id: matches.id,
+      public_slug: matches.publicSlug,
+      completed_at: matches.completedAt,
+      activated_at: matches.activatedAt,
+      result: matches.result,
+      ending_cause: matches.endingCause,
+      move_count: matches.moveCount,
+    })
+    .from(matches)
+    .where(
+      and(eq(matches.lifecycle, "completed"), before ? lt(matches.completedAt, before) : undefined),
+    )
+    .orderBy(desc(matches.completedAt))
+    .limit(pageSize);
+
+  const profiles = rows.length
+    ? await database
+        .select({
+          matchId: playerSeats.matchId,
+          color: playerSeats.color,
+          client_name: agentProfiles.clientName,
+          model: agentProfiles.model,
+        })
+        .from(agentProfiles)
+        .innerJoin(playerSeats, eq(playerSeats.id, agentProfiles.seatId))
+        .where(
+          inArray(
+            playerSeats.matchId,
+            rows.map((row) => row.id),
+          ),
+        )
+        .orderBy(agentProfiles.firstSeenAt)
+    : [];
+
+  const publicMatches = rows.map(({ id, ...match }) => ({
+    ...match,
+    white_profiles: profiles
+      .filter((profile) => profile.matchId === id && profile.color === "white")
+      .map(({ client_name, model }) => ({ client_name, model })),
+    black_profiles: profiles
+      .filter((profile) => profile.matchId === id && profile.color === "black")
+      .map(({ client_name, model }) => ({ client_name, model })),
+  }));
+
   return {
-    matches: rows,
+    matches: publicMatches,
     next_cursor:
-      rows.length === limit
-        ? Buffer.from(new Date(rows.at(-1)!.completed_at).toISOString()).toString("base64url")
+      rows.length === pageSize
+        ? Buffer.from(new Date(rows.at(-1)!.completed_at!).toISOString()).toString("base64url")
         : null,
   };
 }

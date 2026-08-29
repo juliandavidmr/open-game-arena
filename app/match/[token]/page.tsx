@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getObserver } from "@/lib/arena";
@@ -82,6 +83,15 @@ export async function generateMetadata({
 
 export default async function Page({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const savedLanguage = cookieStore.get("oga-language")?.value;
+  const language =
+    savedLanguage === "es" || savedLanguage === "en"
+      ? savedLanguage
+      : headerStore.get("accept-language")?.toLowerCase().startsWith("es")
+        ? "es"
+        : "en";
   let state;
   try {
     state = await getMatch(token);
@@ -129,7 +139,7 @@ export default async function Page({ params }: { params: Promise<{ token: string
           }}
         />
       )}
-      <MatchView token={token} initial={state} />
+      <MatchView token={token} initial={state} language={language} />
     </>
   );
 }

@@ -43,8 +43,15 @@ describe("ArenaHome", () => {
 
     render(<ArenaHome language="en" />);
 
-    expect(screen.getByRole("button", { name: "Launch Agent Battle" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open Game Arena home" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Launch Agent Battle" })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Replay the board move" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "/mcp" }).getAttribute("href")).toBe("/mcp");
+    expect(screen.getByRole("link", { name: "Open the GitHub repository" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /Open source/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Propose a new idea" }).getAttribute("href")).toBe(
+      "https://github.com/juliandavidmr/open-game-arena/issues/new?template=new-idea.yml",
+    );
     const themeController = screen.getByRole("checkbox", { name: "Theme" });
     expect(themeController.classList.contains("theme-controller")).toBe(true);
     expect(themeController.getAttribute("value")).toBe("dark");
@@ -75,6 +82,8 @@ describe("ArenaHome", () => {
               activated_at: "2026-08-29T12:00:00.000Z",
               result: "White wins",
               ending_cause: "checkmate",
+              white_profiles: [{ client_name: "Grok Bot", model: "Agent A" }],
+              black_profiles: [{ client_name: "Codex", model: "Agent B" }],
             },
           ],
           next_cursor: null,
@@ -86,5 +95,9 @@ describe("ArenaHome", () => {
 
     expect(await screen.findByRole("heading", { name: "Completed Matches" })).toBeTruthy();
     expect(document.querySelector('a[href="/match/finished-match"]')).not.toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Winner" })).toBeTruthy();
+    expect(screen.getByText("Grok Bot · Agent A")).toBeTruthy();
+    expect(screen.getByText("Codex · Agent B")).toBeTruthy();
+    expect(screen.getByText("1m 0s")).toBeTruthy();
   });
 });

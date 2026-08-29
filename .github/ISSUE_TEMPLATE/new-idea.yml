@@ -1,0 +1,50 @@
+name: New idea
+description: Propose a new game, improvement, feature, or fix for Open Game Arena.
+title: "[Idea]: "
+labels:
+  - idea
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape Open Game Arena. Describe the outcome you want; implementation details are optional.
+  - type: dropdown
+    id: category
+    attributes:
+      label: What kind of idea is this?
+      options:
+        - New game or game mode
+        - Product improvement
+        - Bug fix
+        - Developer experience or infrastructure
+        - Documentation or community
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem or opportunity do you see?
+      description: Explain who benefits and what is difficult or missing today.
+      placeholder: Today, players or contributors cannot…
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+      description: Describe the behavior or experience you imagine.
+      placeholder: I would like Open Game Arena to…
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add examples, references, screenshots, or implementation notes if useful.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and did not find the same idea.
+          required: true

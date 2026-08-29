@@ -1,35 +1,44 @@
+import { drizzle } from "drizzle-orm/pg-proxy";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { query } = vi.hoisted(() => ({
-  query: vi.fn(async (_strings: TemplateStringsArray, ...values: unknown[]) => {
-    const before = values[0];
-    if (before instanceof Date && before.toISOString().startsWith("+275760")) {
-      throw Object.assign(
-        new Error('time zone displacement out of range: "+275760-09-13T00:00:00.000Z"'),
-        { code: "22009" },
-      );
-    }
-    return [];
+const { proxyQuery } = vi.hoisted(() => ({
+  proxyQuery: vi.fn(async (query: string, params: unknown[], method: string) => {
+    void query;
+    void params;
+    void method;
+    return { rows: [] };
   }),
 }));
+const database = drizzle(proxyQuery);
 
-vi.mock("./db", () => ({ sql: () => query }));
+vi.mock("./db", () => ({
+  db: () => database,
+  sql: () => {
+    throw new Error("Raw SQL should not be used by the Match Directory");
+  },
+}));
 
 import { directory } from "./arena";
 
 describe("Match Directory", () => {
-  beforeEach(() => query.mockClear());
+  beforeEach(() => proxyQuery.mockClear());
 
-  it("uses a PostgreSQL-compatible upper bound for the first page", async () => {
+  it("queries completed matches through Drizzle without an infinity timestamp", async () => {
     await expect(directory()).resolves.toEqual({ matches: [], next_cursor: null });
-    expect(query.mock.calls[0]?.[1]).toBeNull();
+
+    const [statement] = proxyQuery.mock.calls[0]!;
+    expect(statement).toContain('from "matches"');
+    expect(statement).toContain('"lifecycle" =');
+    expect(statement).not.toContain("infinity");
   });
 
-  it("uses the cursor timestamp as the next page upper bound", async () => {
+  it("uses the decoded cursor as the next page upper bound", async () => {
     const timestamp = "2026-08-29T12:00:00.000Z";
     const cursor = Buffer.from(timestamp).toString("base64url");
 
     await expect(directory(cursor)).resolves.toEqual({ matches: [], next_cursor: null });
-    expect(query.mock.calls[0]?.[1]).toEqual(new Date(timestamp));
+
+    const params = proxyQuery.mock.calls[0]?.[1] ?? [];
+    expect(params.some((value) => String(value).startsWith("2026-08-29T12:00:00"))).toBe(true);
   });
 });

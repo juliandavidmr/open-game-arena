@@ -10,6 +10,13 @@ export type HeroProps = {
   createLabel: string;
   creatingLabel: string;
   alternativeLabel: string;
+  replayLabel: string;
+  busy: boolean;
+  onCreate: () => void | Promise<void>;
+};
+
+type CreateMatchCtaProps = {
+  label: string;
   busy: boolean;
   onCreate: () => void | Promise<void>;
 };
@@ -37,12 +44,30 @@ function Rook() {
   );
 }
 
+export function CreateMatchCta({ label, busy, onCreate }: CreateMatchCtaProps) {
+  return (
+    <button
+      type="button"
+      className={styles.cta}
+      disabled={busy}
+      aria-busy={busy}
+      onClick={() => void onCreate()}
+    >
+      <span>{label}</span>
+      <span className={styles.ctaPiece} aria-hidden="true">
+        ♞
+      </span>
+    </button>
+  );
+}
+
 export function Hero({
   tagline,
   claim,
   createLabel,
   creatingLabel,
   alternativeLabel,
+  replayLabel,
   busy,
   onCreate,
 }: HeroProps) {
@@ -55,6 +80,13 @@ export function Hero({
       const media = gsap.matchMedia();
 
       media.add("(prefers-reduced-motion: no-preference)", () => {
+        const board = root.current?.querySelector<HTMLElement>("[data-board]");
+        const knight = root.current?.querySelector<HTMLElement>('[data-piece="knight"]');
+        const rook = root.current?.querySelector<HTMLElement>('[data-piece="rook"]');
+        const movePath = root.current?.querySelector<SVGPathElement>("[data-move-path]");
+        const impact = root.current?.querySelector<HTMLElement>("[data-impact]");
+        if (!board || !knight || !rook || !movePath || !impact) return;
+
         const intro = gsap.timeline({
           defaults: { ease: "power3.out" },
         });
@@ -150,25 +182,68 @@ export function Hero({
             1.78,
           );
 
-        gsap.to(`[data-piece="knight"]`, {
-          y: -7,
-          rotate: -1.5,
-          duration: 2.1,
-          ease: "sine.inOut",
-          repeat: -1,
-          yoyo: true,
-          delay: 2.35,
+        const rotateX = gsap.quickTo(board, "rotationX", {
+          duration: 0.35,
+          ease: "power3.out",
+        });
+        const rotateY = gsap.quickTo(board, "rotationY", {
+          duration: 0.35,
+          ease: "power3.out",
+        });
+        const pieceX = gsap.quickTo("[data-piece]", "x", {
+          duration: 0.35,
+          ease: "power3.out",
+        });
+        const pieceY = gsap.quickTo("[data-piece]", "y", {
+          duration: 0.35,
+          ease: "power3.out",
         });
 
-        gsap.to(`[data-piece="rook"]`, {
-          y: 6,
-          rotate: 1,
-          duration: 2.5,
-          ease: "sine.inOut",
-          repeat: -1,
-          yoyo: true,
-          delay: 2.35,
-        });
+        const resetTilt = () => {
+          rotateX(0);
+          rotateY(0);
+          pieceX(0);
+          pieceY(0);
+          board.style.setProperty("--pointer-x", "50%");
+          board.style.setProperty("--pointer-y", "50%");
+        };
+        const tiltBoard = (event: PointerEvent) => {
+          const bounds = board.getBoundingClientRect();
+          const x = (event.clientX - bounds.left) / bounds.width;
+          const y = (event.clientY - bounds.top) / bounds.height;
+          rotateX((0.5 - y) * 7);
+          rotateY((x - 0.5) * 7);
+          pieceX((x - 0.5) * 8);
+          pieceY((y - 0.5) * 8);
+          board.style.setProperty("--pointer-x", `${x * 100}%`);
+          board.style.setProperty("--pointer-y", `${y * 100}%`);
+        };
+
+        let replay: gsap.core.Timeline | undefined;
+        const replayMove = () => {
+          replay?.kill();
+          replay = gsap
+            .timeline({ defaults: { ease: "power3.out" } })
+            .set(movePath, { strokeDashoffset: 180 })
+            .set(impact, { autoAlpha: 0, scale: 0.3 })
+            .to(knight, { x: 18, y: -22, rotate: 4, duration: 0.38 })
+            .to(movePath, { strokeDashoffset: 0, duration: 0.48, ease: "power2.inOut" }, 0)
+            .to(rook, { x: -8, y: 7, rotate: -2, duration: 0.28 }, 0.26)
+            .to(impact, { autoAlpha: 1, scale: 1, duration: 0.22 }, 0.32)
+            .to(impact, { autoAlpha: 0, scale: 1.3, duration: 0.2 })
+            .to([knight, rook], { x: 0, y: 0, rotate: 0, duration: 0.34 }, "<");
+        };
+
+        board.addEventListener("pointermove", tiltBoard);
+        board.addEventListener("pointerleave", resetTilt);
+        board.addEventListener("click", replayMove);
+
+        return () => {
+          replay?.kill();
+          board.removeEventListener("pointermove", tiltBoard);
+          board.removeEventListener("pointerleave", resetTilt);
+          board.removeEventListener("click", replayMove);
+        };
       });
 
       media.add("(prefers-reduced-motion: reduce)", () => {
@@ -206,18 +281,11 @@ export function Hero({
             {claim}
           </p>
           <div data-hero-action className={styles.actions}>
-            <button
-              type="button"
-              className={styles.cta}
-              disabled={busy}
-              aria-busy={busy}
-              onClick={() => void onCreate()}
-            >
-              <span>{busy ? creatingLabel : createLabel}</span>
-              <span className={styles.ctaPiece} aria-hidden="true">
-                ♞
-              </span>
-            </button>
+            <CreateMatchCta
+              label={busy ? creatingLabel : createLabel}
+              busy={busy}
+              onCreate={onCreate}
+            />
           </div>
           <p data-hero-action className={styles.alternative}>
             {alternativeLabel}:{" "}
@@ -228,8 +296,8 @@ export function Hero({
           </p>
         </div>
 
-        <div className={styles.visual} aria-hidden="true">
-          <div data-board className={styles.boardFrame}>
+        <div className={styles.visual}>
+          <button type="button" data-board className={styles.boardFrame} aria-label={replayLabel}>
             <div className={styles.boardTopline}>
               <span>AGENT 01</span>
               <span className={styles.turnSignal}>LIVE POSITION</span>
@@ -268,7 +336,7 @@ export function Hero({
               <span className={styles.positionCode}>E4 · C6 · NF3</span>
               <span>02</span>
             </div>
-          </div>
+          </button>
         </div>
       </div>
     </section>

@@ -16,9 +16,11 @@ describe("SiteFooter", () => {
 
     expect(footer?.classList.contains("footer")).toBe(true);
     expect(footer?.classList.contains("sm:flex-row")).toBe(true);
+    expect(screen.getByRole("link", { name: "Open Game Arena home" })).toBeTruthy();
     expect(screen.getByRole("combobox", { name: "Language" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "About" }).getAttribute("href")).toBe("/about");
     expect(screen.getByRole("link", { name: "Privacy" }).getAttribute("href")).toBe("/privacy");
+    expect(screen.getByRole("link", { name: "Open the GitHub repository" })).toBeTruthy();
   });
 
   it("shows only the labels for the selected language", async () => {

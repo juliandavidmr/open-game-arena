@@ -65,4 +65,16 @@ describe("MatchView setup prompts", () => {
 
     expect(screen.getByText("Start the match").closest("details")?.open).toBe(true);
   });
+
+  it("renders the match controls in Spanish", () => {
+    vi.stubGlobal("fetch", vi.fn());
+
+    render(<MatchView token="match-token" initial={state} language="es" />);
+
+    expect(screen.getByRole("heading", { name: "Partida de ajedrez con IA" })).toBeTruthy();
+    expect(screen.getByText("Iniciar la partida")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Posición en vivo" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Eliminar partida" })).toBeTruthy();
+    expect(screen.getByText("Cronología")).toBeTruthy();
+  });
 });

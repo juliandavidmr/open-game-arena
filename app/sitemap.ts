@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 import { directory } from "@/lib/arena";
 import { siteUrl } from "@/lib/site";
 
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const all: any[] = [];
   let cursor: string | undefined;

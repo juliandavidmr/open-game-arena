@@ -2,10 +2,12 @@
   --arena-violet: #5b38f0;
   --arena-violet-bright: #846dff;
   --arena-ink: var(--color-base-content, #17161b);
+  --arena-board-light: color-mix(in oklab, var(--color-base-100, #fff) 88%, #d9d5f1);
+  --arena-board-dark: color-mix(in oklab, var(--arena-violet) 17%, var(--color-base-200, #e7e7eb));
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: min(760px, calc(100svh - 68px));
+  min-height: min(680px, calc(100svh - 68px));
   background:
     radial-gradient(
       circle at 78% 40%,
@@ -18,13 +20,13 @@
 
 .shell {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.86fr);
   align-items: center;
   gap: clamp(2rem, 5vw, 6rem);
   width: min(100% - 3rem, 1152px);
   min-height: inherit;
   margin-inline: auto;
-  padding-block: clamp(4rem, 8vw, 7.5rem);
+  padding-block: clamp(3.5rem, 7vw, 6rem);
 }
 
 .copy {
@@ -100,9 +102,9 @@
   padding: 0.8rem 0.8rem 0.8rem 1.35rem;
   border: 0;
   border-radius: 0.75rem;
-  background: var(--arena-violet);
+  background: var(--arena-violet, #5b38f0);
   box-shadow:
-    0 14px 35px color-mix(in oklab, var(--arena-violet) 28%, transparent),
+    0 14px 35px color-mix(in oklab, var(--arena-violet, #5b38f0) 28%, transparent),
     inset 0 1px 0 #ffffff40;
   color: white;
   cursor: pointer;
@@ -118,7 +120,7 @@
 .cta:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow:
-    0 18px 42px color-mix(in oklab, var(--arena-violet) 38%, transparent),
+    0 18px 42px color-mix(in oklab, var(--arena-violet, #5b38f0) 38%, transparent),
     inset 0 1px 0 #ffffff55;
 }
 
@@ -128,7 +130,7 @@
 
 .cta:focus-visible,
 .mcpLink:focus-visible {
-  outline: 3px solid color-mix(in oklab, var(--arena-violet) 55%, white);
+  outline: 3px solid color-mix(in oklab, var(--arena-violet, #5b38f0) 55%, white);
   outline-offset: 4px;
 }
 
@@ -190,25 +192,29 @@
 }
 
 .boardFrame {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
   position: relative;
-  width: min(100%, 570px);
+  width: min(100%, 470px);
   padding: 0.9rem;
+  border: 1px solid color-mix(in oklab, var(--arena-violet) 24%, transparent);
   border-radius: 1rem;
   background: color-mix(in oklab, var(--color-base-100, #fff) 84%, transparent);
   box-shadow:
     0 45px 90px #15102024,
     inset 0 1px 0 #ffffff8c;
   backdrop-filter: blur(12px);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
   transform-style: preserve-3d;
+  touch-action: manipulation;
 }
 
 .boardFrame::before {
   position: absolute;
   z-index: -1;
-  content: "";
-}
-
-.boardFrame::before {
   inset: 10% -8% -12% 10%;
   border-radius: 50%;
   background: color-mix(in oklab, var(--arena-violet) 18%, transparent);
@@ -249,6 +255,31 @@
   content: "";
 }
 
+.boardFrame::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--pointer-x) var(--pointer-y),
+    color-mix(in oklab, var(--arena-violet-bright) 15%, transparent),
+    transparent 34%
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.boardFrame:hover::after,
+.boardFrame:focus-visible::after {
+  opacity: 1;
+}
+
+.boardFrame:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--arena-violet) 65%, white);
+  outline-offset: 5px;
+}
+
 .board {
   position: relative;
   display: grid;
@@ -266,11 +297,11 @@
 }
 
 .squareLight {
-  background: color-mix(in oklab, var(--color-base-100, #fff) 88%, #d9d5f1);
+  background: var(--arena-board-light);
 }
 
 .squareDark {
-  background: color-mix(in oklab, var(--arena-violet) 17%, var(--color-base-200, #e7e7eb));
+  background: var(--arena-board-dark);
 }
 
 .movePath {
@@ -372,6 +403,43 @@
   color: var(--arena-violet-bright);
 }
 
+:global([data-theme="dark"]) .hero {
+  --arena-ink: var(--color-base-content, #f4f1ff);
+  --arena-board-light: color-mix(in oklab, var(--color-base-200, #22202a) 88%, #514a78);
+  --arena-board-dark: color-mix(in oklab, var(--arena-violet) 28%, #17151f);
+  background:
+    radial-gradient(
+      circle at 78% 40%,
+      color-mix(in oklab, var(--arena-violet-bright) 20%, transparent) 0,
+      transparent 38%
+    ),
+    linear-gradient(135deg, var(--color-base-100, #15131a), var(--color-base-200, #211e29));
+}
+
+:global([data-theme="dark"]) .boardFrame {
+  border-color: color-mix(in oklab, var(--arena-violet-bright) 38%, transparent);
+  background: color-mix(in oklab, var(--color-base-200, #211e29) 86%, transparent);
+  box-shadow:
+    0 38px 80px #00000070,
+    inset 0 1px 0 #ffffff18;
+}
+
+:global([data-theme="dark"]) .board {
+  border-color: color-mix(in oklab, var(--arena-violet-bright) 30%, transparent);
+  background: var(--color-base-200, #211e29);
+  box-shadow: inset 0 0 35px #00000052;
+}
+
+:global([data-theme="dark"]) .knight {
+  color: #f2efff;
+}
+
+:global([data-theme="dark"]) .rook {
+  color: #121018;
+  filter: drop-shadow(0 12px 11px #00000080)
+    drop-shadow(0 0 1px color-mix(in oklab, var(--arena-violet-bright) 65%, white));
+}
+
 @media (max-width: 900px) {
   .hero {
     min-height: auto;
@@ -388,7 +456,7 @@
   }
 
   .visual {
-    width: min(100%, 580px);
+    width: min(100%, 500px);
     margin-inline: auto;
   }
 }
@@ -420,7 +488,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .cta,
-  .mcpLink {
+  .mcpLink,
+  .boardFrame::after {
     transition: none;
   }
 }
