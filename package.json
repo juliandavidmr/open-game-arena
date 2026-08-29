@@ -15,6 +15,7 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "chess.js": "^1.4.0",
     "daisyui": "^5.7.22",
     "drizzle-orm": "^0.45.2",
