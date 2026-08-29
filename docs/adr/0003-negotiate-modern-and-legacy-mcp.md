@@ -1,3 +1,3 @@
 # Negotiate modern and legacy MCP revisions
 
-Arena's Creation MCP and Player MCP endpoints will negotiate the current MCP revision and the legacy revisions supported by the TypeScript SDK rather than implementing only one protocol era. This extra adapter complexity is intentional because named target hosts may adopt revisions at different times; Arena's Match, Player Seat, and capability state remain application concepts and never depend on an MCP transport session.
+Open Game Arena's Creation MCP and Player MCP endpoints will launch with explicit compatibility tests for MCP revisions `2026-07-28` and `2025-11-25`, rather than implementing only one protocol era. Compatibility changes require an intentional dependency upgrade and updated contract tests; Match, Player Seat, and capability state remain application concepts and never depend on an MCP transport session.
