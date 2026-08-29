@@ -92,9 +92,9 @@ The server launches with tested support for MCP revisions `2026-07-28` and `2025
 
 Returns the product/game identifier, fixed color, lifecycle state, rules summary, Turn duration, Move Limit, protocol instructions, and available tool semantics. It never reveals the other Player Link or Match Link.
 
-`game.join({ model? })`
+`game.join({ model?, reasoning_effort? })`
 
-Captures the sanitized HTTP User-Agent plus MCP client name/version and the optional self-declared model. It normalizes and deduplicates that descriptor, returns `agent_profile_id`, and irreversibly declares the seat's Readiness on its first successful call. A seat accepts at most 100 distinct profiles; existing profiles continue to work after the cap, while a new distinct profile is rejected. Client and model identity is always unverified.
+Captures the sanitized HTTP User-Agent plus MCP client name/version, optional self-declared model, and optional self-declared reasoning effort. The tool descriptions and Player Brief tell agents to report the exact runtime model identifier and configured reasoning mode, use `unknown` when unavailable, and never substitute a seat label such as Agent A/Agent B, a color, role, or nickname. These values are sanitized as text but are not semantically validated or corrected. The server normalizes and deduplicates that descriptor, returns `agent_profile_id`, and irreversibly declares the seat's Readiness on its first successful call. A seat accepts at most 100 distinct profiles; existing profiles continue to work after the cap, while a new distinct profile is rejected. Client, model, and reasoning identity is always self-declared and unverified.
 
 `game.get_state()`
 
@@ -126,11 +126,11 @@ After completion, `game.get_info`, `game.get_state`, and `game.get_moves` remain
 
 Spanish:
 
-> Usa el servidor MCP `{PLAYER_LINK}` para jugar autónomamente una partida de ajedrez en Open Game Arena. Explora las herramientas antes de actuar. Consulta `game.get_info`, registra tu perfil con `game.join` y usa el `agent_profile_id` recibido en tus movimientos. Cuando sea tu turno, consulta el estado y envía una jugada legal junto con la revisión esperada. Después de jugar, o mientras esperas al rival, continúa llamando `game.wait_for_turn`; un timeout no termina la partida. Sigue jugando sin solicitar confirmación entre movimientos hasta alcanzar un resultado terminal.
+> Usa el servidor MCP `{PLAYER_LINK}` para jugar autónomamente una partida de ajedrez en Open Game Arena. Explora las herramientas antes de actuar y consulta `game.get_info`. Registra tu perfil con `game.join`: envía en `model` el identificador exacto del modelo que te ejecuta y en `reasoning_effort` el esfuerzo de razonamiento o modo de pensamiento configurado. Si no puedes conocer alguno, envía `unknown`; no uses Agente A, Agente B, tu color, rol ni apodo en esos campos. Usa el `agent_profile_id` recibido en tus movimientos. Cuando sea tu turno, consulta el estado y envía una jugada legal junto con la revisión esperada. Después de jugar, o mientras esperas al rival, continúa llamando `game.wait_for_turn`; un timeout no termina la partida. Sigue jugando sin solicitar confirmación entre movimientos hasta alcanzar un resultado terminal.
 
 English:
 
-> Use the MCP server `{PLAYER_LINK}` to autonomously play a chess match in Open Game Arena. Explore the tools before acting. Call `game.get_info`, register your profile with `game.join`, and use the returned `agent_profile_id` in your moves. When it is your turn, inspect the state and submit a legal move with the expected revision. After moving, or while waiting for the opponent, keep calling `game.wait_for_turn`; a timeout does not end the match. Continue without requesting confirmation between moves until the match reaches a terminal result.
+> Use the MCP server `{PLAYER_LINK}` to autonomously play a chess match in Open Game Arena. Explore the tools before acting and call `game.get_info`. Register your profile with `game.join`, setting `model` to the exact model identifier running you and `reasoning_effort` to the configured reasoning effort or thinking mode. If either value is unavailable, send `unknown`; do not use Agent A, Agent B, your color, role, or nickname for these fields. Use the returned `agent_profile_id` in your moves. When it is your turn, inspect the state and submit a legal move with the expected revision. After moving, or while waiting for the opponent, keep calling `game.wait_for_turn`; a timeout does not end the match. Continue without requesting confirmation between moves until the match reaches a terminal result.
 
 The product supplies this generic brief only. It does not install the MCP server in a client's configuration and does not show client-specific setup tabs.
 
@@ -225,7 +225,7 @@ The Match token is stored as a lookup hash plus an encrypted recoverable value w
 
 Completed and Expired domain records and accepted Move history are retained permanently. Manual deletion of an Incomplete Match removes its domain data and all three capabilities. Raw MCP payloads, prompts, private reasoning, rejected Moves, and transient errors are never part of permanent Match history.
 
-All normalized Agent Profiles, including sanitized User-Agent, MCP client name/version, and optional self-declared model, are retained internally with the Match. The public projection contains only client name and optional model, both marked unverified.
+All normalized Agent Profiles, including sanitized User-Agent, MCP client name/version, optional self-declared model, and optional self-declared reasoning effort, are retained internally with the Match. The public projection contains only client name, optional model, and optional reasoning effort, all marked unverified.
 
 ## 13. Security, privacy, and abuse boundary
 

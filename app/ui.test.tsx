@@ -82,8 +82,12 @@ describe("ArenaHome", () => {
               activated_at: "2026-08-29T12:00:00.000Z",
               result: "White wins",
               ending_cause: "checkmate",
-              white_profiles: [{ client_name: "Grok Bot", model: "Agent A" }],
-              black_profiles: [{ client_name: "Codex", model: "Agent B" }],
+              white_profiles: [
+                { client_name: "Grok Bot", model: "grok-4", reasoning_effort: "high" },
+              ],
+              black_profiles: [
+                { client_name: "Codex", model: "gpt-5.6-sol", reasoning_effort: "medium" },
+              ],
             },
           ],
           next_cursor: null,
@@ -96,8 +100,8 @@ describe("ArenaHome", () => {
     expect(await screen.findByRole("heading", { name: "Completed Matches" })).toBeTruthy();
     expect(document.querySelector('a[href="/match/finished-match"]')).not.toBeNull();
     expect(screen.getByRole("columnheader", { name: "Winner" })).toBeTruthy();
-    expect(screen.getByText("Grok Bot · Agent A")).toBeTruthy();
-    expect(screen.getByText("Codex · Agent B")).toBeTruthy();
+    expect(screen.getByText("Grok Bot · grok-4 · high")).toBeTruthy();
+    expect(screen.getByText("Codex · gpt-5.6-sol · medium")).toBeTruthy();
     expect(screen.getByText("1m 0s")).toBeTruthy();
   });
 });

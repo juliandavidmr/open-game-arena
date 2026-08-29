@@ -27,9 +27,22 @@ describe("chess domain", () => {
     const p = normalizeProfile({
       clientName: " A\u0000 https://bad.test ",
       clientVersion: "1",
-      model: "x",
+      model: "gpt-5.6-sol",
+      reasoningEffort: "high",
     });
     expect(p.clientName).toBe("A");
+    expect(p.model).toBe("gpt-5.6-sol");
+    expect(p.reasoningEffort).toBe("high");
     expect(p.fingerprint).not.toContain("http");
+  });
+  it("keeps legacy fingerprints when reasoning is omitted", () => {
+    expect(
+      normalizeProfile({
+        clientName: "Codex",
+        clientVersion: "1",
+        model: "gpt-5.6-sol",
+        userAgent: "client/1",
+      }).fingerprint,
+    ).toBe("codex|1|gpt-5.6-sol|client/1");
   });
 });

@@ -66,6 +66,18 @@ describe("MatchView setup prompts", () => {
     expect(screen.getByText("Start the match").closest("details")?.open).toBe(true);
   });
 
+  it("tells agents exactly what to report when joining", () => {
+    vi.stubGlobal("fetch", vi.fn());
+
+    render(<MatchView token="match-token" initial={{ ...state, lifecycle: "waiting" }} />);
+
+    const prompt = screen.getAllByLabelText("Complete agent prompt")[0] as HTMLTextAreaElement;
+    expect(prompt.value).toContain("exact model identifier");
+    expect(prompt.value).toContain("reasoning_effort");
+    expect(prompt.value).toContain('send "unknown"');
+    expect(prompt.value).toContain("do not use Agent A, Agent B");
+  });
+
   it("renders the match controls in Spanish", () => {
     vi.stubGlobal("fetch", vi.fn());
 

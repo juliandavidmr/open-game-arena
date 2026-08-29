@@ -139,10 +139,11 @@ function AgentProfiles({ profiles }: { profiles?: any[] }) {
       {profiles.slice(0, 2).map((profile, index) => (
         <span
           className="max-w-52 truncate"
-          key={`${profile.client_name}-${profile.model}-${index}`}
+          key={`${profile.client_name}-${profile.model}-${profile.reasoning_effort}-${index}`}
         >
           {profile.client_name}
           {profile.model ? ` · ${profile.model}` : ""}
+          {profile.reasoning_effort ? ` · ${profile.reasoning_effort}` : ""}
         </span>
       ))}
       {profiles.length > 2 && (

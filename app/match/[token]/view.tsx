@@ -44,8 +44,8 @@ const translations = {
     colors: { white: "White", black: "Black" },
     lifecycle: { waiting: "Waiting", active: "Active", completed: "Completed" },
     draw: "Draw",
-    agentPrompt: (agent: string, color: string, link: string) =>
-      `You are Agent ${agent}, playing ${color} in an autonomous chess match. Connect to the Open Game Arena MCP server at ${link}. Explore the available tools, call game.get_info, join the match, and keep calling game.wait_for_turn. When it is your turn, make a legal move. Continue until the match reaches a terminal state.`,
+    agentPrompt: (_agent: string, color: string, link: string) =>
+      `Play ${color} in an autonomous chess match using the Open Game Arena MCP server at ${link}. Explore the available tools and call game.get_info before acting. Then call game.join with model set to the exact model identifier running you and reasoning_effort set to your configured reasoning effort or thinking mode. If either value is unavailable, send "unknown"; do not use Agent A, Agent B, your color, role, or nickname for these fields. Use the returned agent_profile_id, inspect the state, make a legal move when it is your turn, and keep calling game.wait_for_turn until the match reaches a terminal state.`,
   },
   es: {
     breadcrumb: "Migas de pan",
@@ -85,8 +85,8 @@ const translations = {
     colors: { white: "Blancas", black: "Negras" },
     lifecycle: { waiting: "Esperando", active: "Activa", completed: "Completada" },
     draw: "Tablas",
-    agentPrompt: (agent: string, color: string, link: string) =>
-      `Eres el Agente ${agent} y juegas con ${color} en una partida autónoma de ajedrez. Conéctate al servidor MCP de Open Game Arena en ${link}. Explora las herramientas disponibles, llama a game.get_info, únete a la partida y sigue llamando a game.wait_for_turn. Cuando sea tu turno, realiza una jugada legal. Continúa hasta que la partida alcance un estado final.`,
+    agentPrompt: (_agent: string, color: string, link: string) =>
+      `Juega con ${color} una partida autónoma de ajedrez usando el servidor MCP de Open Game Arena en ${link}. Explora las herramientas disponibles y llama a game.get_info antes de actuar. Luego llama a game.join con model igual al identificador exacto del modelo que te ejecuta y reasoning_effort igual al esfuerzo de razonamiento o modo de pensamiento configurado. Si no puedes conocer alguno, envía "unknown"; no uses Agente A, Agente B, tu color, rol ni apodo en esos campos. Usa el agent_profile_id recibido, consulta el estado, realiza una jugada legal cuando sea tu turno y sigue llamando a game.wait_for_turn hasta que la partida alcance un estado final.`,
   },
 } as const;
 
@@ -333,7 +333,7 @@ export function MatchView({
                         <h3 className="font-extrabold">{text.playAs(localizedColor)}</h3>
                         <p className="text-sm text-base-content/60">
                           {profile
-                            ? `${profile.client_name}${profile.model ? ` · ${profile.model}` : ""}`
+                            ? `${profile.client_name}${profile.model ? ` · ${profile.model}` : ""}${profile.reasoning_effort ? ` · ${profile.reasoning_effort}` : ""}`
                             : text.noAgent}
                         </p>
                       </div>
@@ -431,6 +431,7 @@ export function MatchView({
                         <p className="mt-3 truncate text-sm text-base-content/70" key={profile.id}>
                           {profile.client_name}
                           {profile.model ? ` · ${profile.model}` : ""}
+                          {profile.reasoning_effort ? ` · ${profile.reasoning_effort}` : ""}
                         </p>
                       ))
                     ) : (

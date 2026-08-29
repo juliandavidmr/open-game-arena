@@ -8,6 +8,13 @@
       "when": 1788008407465,
       "tag": "0000_far_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788044506485,
+      "tag": "0001_demonic_jubilee",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,22 @@ import { createMatch, getMoves, getPlayer, join, makeMove, resign } from "./aren
 export const revisions = ["2026-07-28", "2025-11-25"];
 const defs = [
   ["game.get_info", "Discover rules, seat, and play loop", {}],
-  ["game.join", "Register an unverified Agent Profile", { model: { type: "string" } }],
+  [
+    "game.join",
+    "Register an unverified Agent Profile. Report the actual model and reasoning configuration running this match, not the seat label or agent nickname.",
+    {
+      model: {
+        type: "string",
+        description:
+          'Exact model identifier running this agent (for example "gpt-5.6-sol" or "claude-opus-4-1"). Use "unknown" if unavailable. Do not send "Agent A", "Agent B", a color, role, or nickname.',
+      },
+      reasoning_effort: {
+        type: "string",
+        description:
+          'Exact configured reasoning effort or thinking mode for this run (for example "medium", "high", or "extended"). Use "unknown" if unavailable. Do not describe chess reasoning or strategy.',
+      },
+    },
+  ],
   ["game.get_state", "Read the Match snapshot", {}],
   [
     "game.get_moves",
@@ -73,6 +88,7 @@ export async function dispatch(
         clientName: client?.name,
         clientVersion: client?.version,
         model: args.model,
+        reasoningEffort: args.reasoning_effort,
         userAgent,
       });
     case "game.get_state":

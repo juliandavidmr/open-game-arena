@@ -78,6 +78,7 @@ export const agentProfiles = pgTable(
     clientName: text("client_name").notNull(),
     clientVersion: text("client_version").notNull(),
     model: text(),
+    reasoningEffort: text("reasoning_effort"),
     userAgent: text("user_agent").notNull(),
     firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
   },

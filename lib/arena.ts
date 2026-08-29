@@ -88,7 +88,7 @@ async function stateFor(tx: any, m: any, includeSecrets = false) {
   const seats =
     await tx`SELECT id,color,ready,token_ciphertext FROM player_seats WHERE match_id=${m.id} ORDER BY color DESC`;
   const profiles =
-    await tx`SELECT p.id,s.color,p.client_name,p.client_version,p.model,p.user_agent,p.first_seen_at FROM agent_profiles p JOIN player_seats s ON s.id=p.seat_id WHERE s.match_id=${m.id} ORDER BY p.first_seen_at`;
+    await tx`SELECT p.id,s.color,p.client_name,p.client_version,p.model,p.reasoning_effort,p.user_agent,p.first_seen_at FROM agent_profiles p JOIN player_seats s ON s.id=p.seat_id WHERE s.match_id=${m.id} ORDER BY p.first_seen_at`;
   const moves =
     await tx`SELECT ply,profile_id,"from","to",promotion,san,fen,created_at,after_revision FROM moves WHERE match_id=${m.id} ORDER BY ply DESC LIMIT 20`;
   return {
@@ -111,6 +111,7 @@ async function stateFor(tx: any, m: any, includeSecrets = false) {
       color: p.color,
       client_name: p.client_name,
       model: p.model,
+      reasoning_effort: p.reasoning_effort,
       unverified: true,
       ...(includeSecrets ? { client_version: p.client_version, user_agent: p.user_agent } : {}),
     })),
@@ -145,7 +146,13 @@ export async function getObserver(token: string, clock: Clock = now) {
 }
 export async function join(
   tokenValue: string,
-  input: { clientName?: unknown; clientVersion?: unknown; model?: unknown; userAgent?: unknown },
+  input: {
+    clientName?: unknown;
+    clientVersion?: unknown;
+    model?: unknown;
+    reasoningEffort?: unknown;
+    userAgent?: unknown;
+  },
   clock: Clock = now,
 ) {
   return sql().begin(async (tx) => {
@@ -167,7 +174,7 @@ export async function join(
       if (count >= 100)
         return { accepted: false, reason: "profile_cap", revision: Number(m.revision) };
       [profile] =
-        await tx`INSERT INTO agent_profiles(seat_id,fingerprint,client_name,client_version,model,user_agent,first_seen_at) VALUES(${m.seat_id},${p.fingerprint},${p.clientName},${p.clientVersion},${p.model},${p.userAgent},${clock()}) RETURNING id`;
+        await tx`INSERT INTO agent_profiles(seat_id,fingerprint,client_name,client_version,model,reasoning_effort,user_agent,first_seen_at) VALUES(${m.seat_id},${p.fingerprint},${p.clientName},${p.clientVersion},${p.model},${p.reasoningEffort},${p.userAgent},${clock()}) RETURNING id`;
     }
     if (!m.seat_ready) {
       const n = clock();
@@ -328,6 +335,7 @@ export async function directory(cursor?: string, limit = 20) {
           color: playerSeats.color,
           client_name: agentProfiles.clientName,
           model: agentProfiles.model,
+          reasoning_effort: agentProfiles.reasoningEffort,
         })
         .from(agentProfiles)
         .innerJoin(playerSeats, eq(playerSeats.id, agentProfiles.seatId))
@@ -344,10 +352,18 @@ export async function directory(cursor?: string, limit = 20) {
     ...match,
     white_profiles: profiles
       .filter((profile) => profile.matchId === id && profile.color === "white")
-      .map(({ client_name, model }) => ({ client_name, model })),
+      .map(({ client_name, model, reasoning_effort }) => ({
+        client_name,
+        model,
+        reasoning_effort,
+      })),
     black_profiles: profiles
       .filter((profile) => profile.matchId === id && profile.color === "black")
-      .map(({ client_name, model }) => ({ client_name, model })),
+      .map(({ client_name, model, reasoning_effort }) => ({
+        client_name,
+        model,
+        reasoning_effort,
+      })),
   }));
 
   return {

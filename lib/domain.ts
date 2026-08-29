@@ -33,20 +33,24 @@ export function normalizeProfile(input: {
   clientName?: unknown;
   clientVersion?: unknown;
   model?: unknown;
+  reasoningEffort?: unknown;
   userAgent?: unknown;
 }) {
   const clientName = sanitize(input.clientName);
   const clientVersion = sanitize(input.clientVersion);
   const model = input.model ? sanitize(input.model) : null;
+  const reasoningEffort = input.reasoningEffort ? sanitize(input.reasoningEffort) : null;
   const userAgent = sanitize(input.userAgent);
+  const fingerprintFields = [clientName, clientVersion, model ?? ""];
+  if (reasoningEffort !== null) fingerprintFields.push(reasoningEffort);
+  fingerprintFields.push(userAgent);
   return {
     clientName,
     clientVersion,
     model,
+    reasoningEffort,
     userAgent,
-    fingerprint: [clientName, clientVersion, model ?? "", userAgent]
-      .map((x) => x.toLowerCase())
-      .join("|"),
+    fingerprint: fingerprintFields.map((x) => x.toLowerCase()).join("|"),
   };
 }
 export function applyChessMove(fen: string, from: string, to: string, promotion?: string) {
