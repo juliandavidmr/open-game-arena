@@ -16,30 +16,3 @@ body {
 body > main {
   flex: 1;
 }
-.board {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  aspect-ratio: 1;
-  max-width: 620px;
-  width: 100%;
-  box-shadow: 0 20px 60px #0003;
-}
-.square {
-  display: grid;
-  place-items: center;
-  font-size: clamp(1.6rem, 7vw, 4rem);
-  user-select: none;
-}
-.square.light {
-  background: #eee3d0;
-}
-.square.dark {
-  background: #92765b;
-}
-.timeline {
-  max-height: 34rem;
-  overflow: auto;
-}
-.token {
-  word-break: break-all;
-}
