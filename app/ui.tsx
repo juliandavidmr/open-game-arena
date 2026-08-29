@@ -72,13 +72,26 @@ if (!i18n.isInitialized)
     fallbackLng: "en",
     interpolation: { escapeValue: false },
   });
-export function ArenaHome({ language }: { language: string }) {
+
+type MatchDirectory = {
+  matches: any[];
+  next_cursor: string | null;
+};
+
+export function ArenaHome({
+  language,
+  initialDirectory,
+}: {
+  language: string;
+  initialDirectory?: MatchDirectory;
+}) {
   const { t, i18n } = useTranslation();
   const [busy, setBusy] = useState(false),
-    [items, setItems] = useState<any[]>([]),
-    [cursor, setCursor] = useState<string | null>(null);
+    [items, setItems] = useState<any[]>(initialDirectory?.matches ?? []),
+    [cursor, setCursor] = useState<string | null>(initialDirectory?.next_cursor ?? null);
   useEffect(() => {
     void i18n.changeLanguage(language);
+    if (initialDirectory) return;
     fetch("/api/matches")
       .then((r) => r.json())
       .then((x) => {
@@ -86,7 +99,7 @@ export function ArenaHome({ language }: { language: string }) {
         setCursor(x.next_cursor);
       })
       .catch(() => {});
-  }, [language, i18n]);
+  }, [language, i18n, initialDirectory]);
   async function create() {
     setBusy(true);
     const r = await fetch("/api/matches", { method: "POST" });

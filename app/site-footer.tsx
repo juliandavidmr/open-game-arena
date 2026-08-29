@@ -1,15 +1,29 @@
+"use client";
+
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { LanguageControl } from "./site-controls";
 
-const footerLinks = [
-  { href: "/about", label: "About / Acerca de" },
-  { href: "/privacy", label: "Privacy / Privacidad" },
-] as const;
+const footerLinks = {
+  en: [
+    { href: "/about", label: "About" },
+    { href: "/privacy", label: "Privacy" },
+  ],
+  es: [
+    { href: "/about", label: "Acerca de" },
+    { href: "/privacy", label: "Privacidad" },
+  ],
+} as const;
 
 export function SiteFooter() {
+  const [language, setLanguage] = useState<"en" | "es">("en");
+  const resolveLanguage = useCallback((resolved: "en" | "es") => {
+    setLanguage(resolved);
+  }, []);
+
   return (
-    <footer className="footer sm:footer-horizontal bg-base-200 text-base-content border-base-300 items-center border-t p-8 sm:p-10">
-      <aside className="grid-flow-col items-center">
+    <footer className="footer bg-base-200 text-base-content border-base-300 flex flex-col gap-6 border-t p-8 sm:flex-row sm:items-center sm:justify-between sm:p-10">
+      <aside>
         <div>
           <Link
             href="/"
@@ -25,10 +39,10 @@ export function SiteFooter() {
 
       <nav
         aria-label="Footer navigation"
-        className="grid-flow-col gap-6 sm:place-self-center sm:justify-self-end"
+        className="flex flex-wrap items-center gap-x-6 gap-y-3 sm:justify-end"
       >
-        <LanguageControl />
-        {footerLinks.map((link) => (
+        <LanguageControl onLanguageResolved={resolveLanguage} />
+        {footerLinks[language].map((link) => (
           <Link
             key={link.href}
             href={link.href}

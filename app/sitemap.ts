@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { directory } from "@/lib/arena";
+import { siteUrl } from "@/lib/site";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
   const all: any[] = [];
   let cursor: string | undefined;
   try {
@@ -10,13 +11,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       all.push(...page.matches);
       cursor = page.next_cursor ?? undefined;
     } while (cursor);
-  } catch {
-    return [{ url: base, lastModified: new Date(), changeFrequency: "daily", priority: 1 }];
-  }
+  } catch {}
+
   return [
-    { url: base, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
+    { url: siteUrl(), changeFrequency: "daily", priority: 1 },
+    { url: siteUrl("/about"), changeFrequency: "monthly", priority: 0.7 },
+    { url: siteUrl("/privacy"), changeFrequency: "yearly", priority: 0.3 },
     ...all.map((m) => ({
-      url: `${base}/match/${m.public_slug}`,
+      url: siteUrl(`/match/${m.public_slug}`),
       lastModified: new Date(m.completed_at),
       changeFrequency: "never" as const,
       priority: 0.7,

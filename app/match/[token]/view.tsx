@@ -103,6 +103,22 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
       ? (process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000")
       : location.origin;
   const currentOutcome = state.result ?? `${state.turn} to move`;
+  const setupComplete = ["white", "black"].every(
+    (color) =>
+      state.readiness[color] && state.profiles.some((profile: any) => profile.color === color),
+  );
+  const whiteAgent =
+    state.profiles.find((profile: any) => profile.color === "white")?.client_name ??
+    "White AI agent";
+  const blackAgent =
+    state.profiles.find((profile: any) => profile.color === "black")?.client_name ??
+    "Black AI agent";
+  const matchHeading =
+    state.lifecycle === "completed" ? `${whiteAgent} vs ${blackAgent}` : "AI chess match";
+  const matchSummary =
+    state.lifecycle === "completed"
+      ? "Replay this autonomous AI chess match and inspect its complete public move record."
+      : "Live position, agent access, and the complete move record in one place.";
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -113,50 +129,94 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
         </a>
       </nav>
 
-      <header className="mb-8 flex flex-col gap-5 border-b border-base-300 pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <header className="mb-8 border-b border-base-300 pb-6">
+        <div className="flex items-start justify-between gap-4">
           <div className="mb-3 flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-black tracking-tight">Match overview</h1>
+            <h1 className="text-3xl font-black tracking-tight">{matchHeading}</h1>
             <span className={`badge badge-lg capitalize ${lifecycleBadge(state.lifecycle)}`}>
               {state.lifecycle}
             </span>
           </div>
-          <p className="max-w-2xl text-base-content/70">
-            Live position, agent access, and the complete move record in one place.
-          </p>
+
+          {state.lifecycle !== "completed" && (
+            <button
+              type="button"
+              className="btn btn-square btn-ghost shrink-0 text-base-content/55 hover:border-error hover:bg-error hover:text-error-content"
+              onClick={deleteMatch}
+              aria-label="Delete match"
+              title="Delete match"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                className="size-5"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6.5 7l.75 13h9.5l.75-13M10 11v5M14 11v5"
+                />
+              </svg>
+            </button>
+          )}
         </div>
 
-        <dl className="flex gap-8 sm:text-right">
-          <div>
-            <dt className="text-sm text-base-content/60">Revision</dt>
-            <dd className="font-mono text-lg font-bold tabular-nums">{state.revision}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-base-content/60">Position</dt>
-            <dd className="text-lg font-bold capitalize">{currentOutcome}</dd>
-          </div>
-        </dl>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <p className="max-w-2xl text-base-content/70">{matchSummary}</p>
+
+          <dl className="flex gap-8 sm:text-right">
+            <div>
+              <dt className="text-sm text-base-content/60">Revision</dt>
+              <dd className="font-mono text-lg font-bold tabular-nums">{state.revision}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-base-content/60">Position</dt>
+              <dd className="text-lg font-bold capitalize">{currentOutcome}</dd>
+            </div>
+          </dl>
+        </div>
       </header>
 
       {state.player_tokens && (
-        <section
-          className="mb-10 rounded-box bg-primary p-5 text-primary-content sm:p-6 lg:p-8"
-          aria-labelledby="start-match-title"
+        <details
+          className="group mb-10 rounded-box bg-primary p-5 text-primary-content sm:p-6 lg:p-8"
+          open={!setupComplete}
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+            <div className="min-w-0">
               <h2 id="start-match-title" className="text-2xl font-black tracking-tight">
                 Start the match
               </h2>
-              <p className="mt-2 max-w-3xl text-primary-content/80">
-                Copy each complete prompt and paste it into a separate AI agent. The private player
-                URL is already included.
-              </p>
             </div>
-            <span className="badge badge-lg border-primary-content/20 bg-primary-content/10 text-primary-content">
-              Primary action
+            <span className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold">
+              <span className="group-open:hidden">Show prompts</span>
+              <span className="hidden group-open:inline">Hide prompts</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="size-5 transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z"
+                  clipRule="evenodd"
+                />
+              </svg>
             </span>
-          </div>
+          </summary>
+
+          <p className="mt-3 max-w-3xl text-primary-content/80">
+            Copy each complete prompt and paste it into a separate AI agent. The private player URL
+            is already included.
+          </p>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             {[
@@ -220,13 +280,10 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
             })}
           </div>
 
-          <p className="mt-4 text-sm text-primary-content/75">
-            Keep these prompts private: each one grants control of its assigned color.
-          </p>
           <span className="sr-only" aria-live="polite">
             {copiedSeat ? `${copiedSeat} agent prompt copied` : ""}
           </span>
-        </section>
+        </details>
       )}
 
       <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.85fr)] xl:gap-12">
@@ -329,36 +386,6 @@ export function MatchView({ token, initial }: { token: string; initial: any }) {
               </div>
             )}
           </section>
-
-          {state.lifecycle !== "completed" && (
-            <div className="flex justify-end border-t border-base-300 pt-6">
-              <button
-                type="button"
-                className="btn btn-square btn-ghost text-base-content/55 hover:border-error hover:bg-error hover:text-error-content"
-                onClick={deleteMatch}
-                aria-label="Delete match"
-                title="Delete match"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  className="size-5"
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3" />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6.5 7l.75 13h9.5l.75-13M10 11v5M14 11v5"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
         </aside>
       </div>
     </main>

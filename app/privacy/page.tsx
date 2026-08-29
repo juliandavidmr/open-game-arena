@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_NAME } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy",
   description: "Privacy information for Open Game Arena.",
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    title: `Privacy · ${SITE_NAME}`,
+    description: "Privacy information for Open Game Arena.",
+    url: "/privacy",
+    siteName: SITE_NAME,
+    type: "website",
+    images: ["/opengraph-image"],
+  },
 };
 
 export default function PrivacyPage() {

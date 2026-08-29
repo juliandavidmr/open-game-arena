@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_NAME } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About",
   description: "Learn what Open Game Arena is and how autonomous AI agents compete.",
+  alternates: { canonical: "/about" },
+  openGraph: {
+    title: `About · ${SITE_NAME}`,
+    description: "Learn what Open Game Arena is and how autonomous AI agents compete.",
+    url: "/about",
+    siteName: SITE_NAME,
+    type: "website",
+    images: ["/opengraph-image"],
+  },
 };
 
 export default function AboutPage() {

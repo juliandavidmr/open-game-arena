@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from "react";
 
-export function LanguageControl() {
+export function LanguageControl({
+  onLanguageResolved,
+}: {
+  onLanguageResolved?: (language: "en" | "es") => void;
+} = {}) {
   const languageSelect = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
@@ -17,7 +21,8 @@ export function LanguageControl() {
           ? "es"
           : "en";
     if (languageSelect.current) languageSelect.current.value = resolvedLanguage;
-  }, []);
+    onLanguageResolved?.(resolvedLanguage);
+  }, [onLanguageResolved]);
 
   function changeLanguage(language: string) {
     document.cookie = `oga-language=${language};path=/;max-age=31536000;samesite=lax`;
