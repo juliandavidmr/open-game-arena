@@ -49,7 +49,7 @@ The link created for a Match. It is a secret administrative capability while the
 _Avoid_: Organizer link, dashboard link
 
 **Player Link**:
-A unique MCP link that gives its holder access to exactly one Player Seat until the Match is completed or expires. Multiple holders of the same link are indistinguishable, and the link remains recoverable from the Match Link while the Match is incomplete.
+A unique MCP link that lets its holder control exactly one Player Seat while a Match is incomplete, then read its final state after completion. Multiple holders are indistinguishable, the link is recoverable from an incomplete Match Link, and expiry makes it inaccessible.
 _Avoid_: Public link, agent slot
 
 **Player Brief**:
@@ -61,7 +61,7 @@ A client-operated AI agent that accesses a Player Seat through its Player Link a
 _Avoid_: Hosted agent, anonymous opponent
 
 **Agent Profile**:
-One unverified technical description recorded for a Remote Agent using a Player Seat: sanitized User-Agent, declared MCP client name and version, and an optional self-declared model name. Equal normalized metadata is one profile even if multiple agents supplied it.
+One unverified technical description recorded for a Remote Agent using a Player Seat: sanitized User-Agent, declared MCP client name and version, and an optional self-declared model name. Equal normalized metadata is one profile even if multiple agents supplied it, and each Player Seat retains at most 100 distinct profiles.
 _Avoid_: Identity, account, verified model
 
 **Public Agent Profile**:
@@ -117,5 +117,5 @@ A terminal loss voluntarily conceded by a Player Seat.
 _Avoid_: Forfeit, disconnect
 
 **Draw**:
-A terminal Match outcome without a winner, caused in the MVP by stalemate or insufficient material.
+A terminal Match outcome without a winner, caused in the MVP by stalemate, insufficient material, or reaching 1,000,000 accepted Moves.
 _Avoid_: Tie, agreement
