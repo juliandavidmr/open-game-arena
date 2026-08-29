@@ -14,16 +14,16 @@ import {
 } from "./domain";
 import { decrypt, encrypt, hash, token } from "./security";
 import { agentProfiles, matches, playerSeats } from "./schema";
+import { siteUrl } from "./site";
 type Clock = () => Date;
 const now: Clock = () => new Date();
 export type Rejection = { accepted: false; reason: string; revision?: number; lifecycle?: string };
 const unavailable = () => Object.assign(new Error("Unavailable"), { code: "UNAVAILABLE" });
-function urls(tokens: { match: string; white: string; black: string }) {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+export function matchUrls(tokens: { match: string; white: string; black: string }) {
   return {
-    match_url: `${base}/match/${tokens.match}`,
-    white_player_mcp_url: `${base}/chess/${tokens.white}`,
-    black_player_mcp_url: `${base}/chess/${tokens.black}`,
+    match_url: siteUrl(`/match/${tokens.match}`),
+    white_player_mcp_url: siteUrl(`/chess/${tokens.white}`),
+    black_player_mcp_url: siteUrl(`/chess/${tokens.black}`),
   };
 }
 async function materialize(tx: any, m: any, clock: Clock) {
@@ -66,7 +66,7 @@ export async function createMatch(clock: Clock = now) {
       await tx`INSERT INTO matches(fen,waiting_expires_at,created_at,match_hash,match_ciphertext) VALUES(${INITIAL_FEN},${expires},${created},${hash(match)},${encrypt(match)}) RETURNING id`;
     await tx`INSERT INTO player_seats(match_id,color,token_hash,token_ciphertext) VALUES(${m.id},'white',${hash(white)},${encrypt(white)}),(${m.id},'black',${hash(black)},${encrypt(black)})`;
   });
-  return urls({ match, white, black });
+  return matchUrls({ match, white, black });
 }
 async function byPlayer(tx: any, t: string, lock = false) {
   const rows = await tx.unsafe(

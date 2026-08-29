@@ -18,7 +18,21 @@ vi.mock("./db", () => ({
   },
 }));
 
-import { directory } from "./arena";
+vi.mock("./site", () => ({
+  siteUrl: (path: string) => new URL(path, "https://arena.example/").toString(),
+}));
+
+import { directory, matchUrls } from "./arena";
+
+describe("Match URLs", () => {
+  it("uses the configured site origin for every newly created match link", () => {
+    expect(matchUrls({ match: "observer", white: "white", black: "black" })).toEqual({
+      match_url: "https://arena.example/match/observer",
+      white_player_mcp_url: "https://arena.example/chess/white",
+      black_player_mcp_url: "https://arena.example/chess/black",
+    });
+  });
+});
 
 describe("Match Directory", () => {
   beforeEach(() => proxyQuery.mockClear());
