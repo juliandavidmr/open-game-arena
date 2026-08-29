@@ -1,5 +1,154 @@
 "use client";
-import { useEffect,useState } from "react"; import { Chess } from "chess.js";
-const pieces:Record<string,string>={wp:"♙",wr:"♖",wn:"♘",wb:"♗",wq:"♕",wk:"♔",bp:"♟",br:"♜",bn:"♞",bb:"♝",bq:"♛",bk:"♚"};
-function Board({fen}:{fen:string}){const b=new Chess(fen).board();return <div className="board" aria-label="Chess board">{b.flatMap((row,r)=>row.map((p,c)=><div key={`${r}-${c}`} className={`square ${(r+c)%2?"dark":"light"}`} aria-label={p?`${p.color} ${p.type}`:"empty"}>{p?pieces[p.color+p.type]:""}</div>))}</div>}
-export function MatchView({token,initial}:{token:string;initial:any}){const [s,setS]=useState(initial);useEffect(()=>{if(s.lifecycle==="completed")return;let timer:any,stopped=false;const poll=async()=>{if(document.hidden){timer=setTimeout(poll,2000);return}try{const r=await fetch(`/api/matches/${token}`,{cache:"no-store"});if(r.ok)setS(await r.json())}finally{if(!stopped)timer=setTimeout(poll,s.lifecycle==="active"?2000:6000)}};timer=setTimeout(poll,1000);return()=>{stopped=true;clearTimeout(timer)}},[token,s.lifecycle]);async function del(){if(confirm("Delete this incomplete Match permanently?")){const r=await fetch(`/api/matches/${token}`,{method:"DELETE"});if(r.ok)location.href="/"}}const base=typeof window==="undefined"?(process.env.NEXT_PUBLIC_BASE_URL??"http://localhost:3000"):location.origin;return <main className="max-w-7xl mx-auto p-4 md:p-8"><a href="/" className="btn btn-ghost">← Open Game Arena</a><div className="flex flex-wrap justify-between items-center gap-3 my-5"><h1 className="text-3xl font-black">MATCH <span className="badge badge-primary badge-lg">{s.lifecycle}</span></h1><div>Revision {s.revision} · {s.result??`${s.turn} to move`}</div></div><div className="grid lg:grid-cols-2 gap-8"><Board fen={s.fen}/><section className="space-y-5"><div className="grid grid-cols-2 gap-3">{["white","black"].map(color=><div className="card bg-base-200" key={color}><div className="card-body p-4"><h2 className="font-bold capitalize">{color} {s.readiness[color]?"✓ Ready":"○ Waiting"}</h2>{s.profiles.filter((p:any)=>p.color===color).map((p:any)=><p key={p.id}>{p.client_name}{p.model?` · ${p.model}`:""} <span className="badge badge-xs">unverified</span></p>)}</div></div>)}</div>{s.player_tokens&&<div className="space-y-3">{["white","black"].map(color=>{const link=`${base}/chess/${s.player_tokens[color]}`;return <div className="collapse collapse-arrow bg-base-200" key={color}><input type="checkbox"/><div className="collapse-title font-semibold capitalize">{color} Player Link & Brief</div><div className="collapse-content"><code className="token block p-2">{link}</code><button className="btn btn-sm my-2" onClick={()=>navigator.clipboard.writeText(link)}>Copy link</button><p>Use the MCP server <code>{link}</code> to play autonomously. Explore tools, call game.get_info, join, and keep calling game.wait_for_turn until terminal.</p></div></div>})}</div>}<div><h2 className="text-xl font-bold mb-2">Timeline</h2><ol className="timeline steps steps-vertical">{s.moves.map((m:any)=><li className="step step-primary" key={m.ply}>#{m.ply} {m.san} · {m.from}–{m.to}</li>)}</ol></div>{s.lifecycle!=="completed"&&<button className="btn btn-error btn-outline" onClick={del}>Delete Match</button>}</section></div></main>}
+import { useEffect, useState } from "react";
+import { Chess } from "chess.js";
+const pieces: Record<string, string> = {
+  wp: "♙",
+  wr: "♖",
+  wn: "♘",
+  wb: "♗",
+  wq: "♕",
+  wk: "♔",
+  bp: "♟",
+  br: "♜",
+  bn: "♞",
+  bb: "♝",
+  bq: "♛",
+  bk: "♚",
+};
+function Board({ fen }: { fen: string }) {
+  const b = new Chess(fen).board();
+  return (
+    <div className="board" aria-label="Chess board">
+      {b.flatMap((row, r) =>
+        row.map((p, c) => (
+          <div
+            key={`${r}-${c}`}
+            className={`square ${(r + c) % 2 ? "dark" : "light"}`}
+            aria-label={p ? `${p.color} ${p.type}` : "empty"}
+          >
+            {p ? pieces[p.color + p.type] : ""}
+          </div>
+        )),
+      )}
+    </div>
+  );
+}
+export function MatchView({ token, initial }: { token: string; initial: any }) {
+  const [s, setS] = useState(initial);
+  useEffect(() => {
+    if (s.lifecycle === "completed") return;
+    let timer: any,
+      stopped = false;
+    const poll = async () => {
+      if (document.hidden) {
+        timer = setTimeout(poll, 2000);
+        return;
+      }
+      try {
+        const r = await fetch(`/api/matches/${token}`, { cache: "no-store" });
+        if (r.ok) setS(await r.json());
+      } finally {
+        if (!stopped) timer = setTimeout(poll, s.lifecycle === "active" ? 2000 : 6000);
+      }
+    };
+    timer = setTimeout(poll, 1000);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [token, s.lifecycle]);
+  async function del() {
+    if (confirm("Delete this incomplete Match permanently?")) {
+      const r = await fetch(`/api/matches/${token}`, { method: "DELETE" });
+      if (r.ok) location.href = "/";
+    }
+  }
+  const base =
+    typeof window === "undefined"
+      ? (process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000")
+      : location.origin;
+  return (
+    <main className="max-w-7xl mx-auto p-4 md:p-8">
+      <a href="/" className="btn btn-ghost">
+        ← Open Game Arena
+      </a>
+      <div className="flex flex-wrap justify-between items-center gap-3 my-5">
+        <h1 className="text-3xl font-black">
+          MATCH <span className="badge badge-primary badge-lg">{s.lifecycle}</span>
+        </h1>
+        <div>
+          Revision {s.revision} · {s.result ?? `${s.turn} to move`}
+        </div>
+      </div>
+      <div className="grid lg:grid-cols-2 gap-8">
+        <Board fen={s.fen} />
+        <section className="space-y-5">
+          <div className="grid grid-cols-2 gap-3">
+            {["white", "black"].map((color) => (
+              <div className="card bg-base-200" key={color}>
+                <div className="card-body p-4">
+                  <h2 className="font-bold capitalize">
+                    {color} {s.readiness[color] ? "✓ Ready" : "○ Waiting"}
+                  </h2>
+                  {s.profiles
+                    .filter((p: any) => p.color === color)
+                    .map((p: any) => (
+                      <p key={p.id}>
+                        {p.client_name}
+                        {p.model ? ` · ${p.model}` : ""}{" "}
+                        <span className="badge badge-xs">unverified</span>
+                      </p>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          {s.player_tokens && (
+            <div className="space-y-3">
+              {["white", "black"].map((color) => {
+                const link = `${base}/chess/${s.player_tokens[color]}`;
+                return (
+                  <div className="collapse collapse-arrow bg-base-200" key={color}>
+                    <input type="checkbox" />
+                    <div className="collapse-title font-semibold capitalize">
+                      {color} Player Link & Brief
+                    </div>
+                    <div className="collapse-content">
+                      <code className="token block p-2">{link}</code>
+                      <button
+                        className="btn btn-sm my-2"
+                        onClick={() => navigator.clipboard.writeText(link)}
+                      >
+                        Copy link
+                      </button>
+                      <p>
+                        Use the MCP server <code>{link}</code> to play autonomously. Explore tools,
+                        call game.get_info, join, and keep calling game.wait_for_turn until
+                        terminal.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div>
+            <h2 className="text-xl font-bold mb-2">Timeline</h2>
+            <ol className="timeline steps steps-vertical">
+              {s.moves.map((m: any) => (
+                <li className="step step-primary" key={m.ply}>
+                  #{m.ply} {m.san} · {m.from}–{m.to}
+                </li>
+              ))}
+            </ol>
+          </div>
+          {s.lifecycle !== "completed" && (
+            <button className="btn btn-error btn-outline" onClick={del}>
+              Delete Match
+            </button>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}

@@ -1,2 +1,25 @@
-import type { MetadataRoute } from "next"; import { directory } from "@/lib/arena";
-export default async function sitemap():Promise<MetadataRoute.Sitemap>{const base=process.env.NEXT_PUBLIC_BASE_URL??"http://localhost:3000";const all:any[]=[];let cursor:string|undefined;try{do{const page=await directory(cursor,100);all.push(...page.matches);cursor=page.next_cursor??undefined}while(cursor);}catch{return [{url:base,lastModified:new Date(),changeFrequency:"daily",priority:1}]}return [{url:base,lastModified:new Date(),changeFrequency:"daily",priority:1},...all.map(m=>({url:`${base}/match/${m.public_slug}`,lastModified:new Date(m.completed_at),changeFrequency:"never" as const,priority:.7}))]}
+import type { MetadataRoute } from "next";
+import { directory } from "@/lib/arena";
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+  const all: any[] = [];
+  let cursor: string | undefined;
+  try {
+    do {
+      const page = await directory(cursor, 100);
+      all.push(...page.matches);
+      cursor = page.next_cursor ?? undefined;
+    } while (cursor);
+  } catch {
+    return [{ url: base, lastModified: new Date(), changeFrequency: "daily", priority: 1 }];
+  }
+  return [
+    { url: base, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
+    ...all.map((m) => ({
+      url: `${base}/match/${m.public_slug}`,
+      lastModified: new Date(m.completed_at),
+      changeFrequency: "never" as const,
+      priority: 0.7,
+    })),
+  ];
+}

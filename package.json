@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "if [ \"$VERCEL_ENV\" = \"production\" ]; then : \"${POSTGRES_URL_NON_POOLING:?POSTGRES_URL_NON_POOLING is required for production migrations}\" && bun run db:migrate; fi && next build",
     "start": "next start",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -24,6 +26,7 @@
     "react-i18next": "^17.0.12"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.11",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^20",

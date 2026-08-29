@@ -87,12 +87,8 @@
           "name": "agent_profiles_seat_id_player_seats_id_fk",
           "tableFrom": "agent_profiles",
           "tableTo": "player_seats",
-          "columnsFrom": [
-            "seat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["seat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -197,12 +193,8 @@
           "name": "idempotency_match_id_matches_id_fk",
           "tableFrom": "idempotency",
           "tableTo": "matches",
-          "columnsFrom": [
-            "match_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["match_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -270,12 +262,8 @@
           "name": "match_events_match_id_matches_id_fk",
           "tableFrom": "match_events",
           "tableTo": "matches",
-          "columnsFrom": [
-            "match_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["match_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -609,12 +597,8 @@
           "name": "moves_match_id_matches_id_fk",
           "tableFrom": "moves",
           "tableTo": "matches",
-          "columnsFrom": [
-            "match_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["match_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -622,12 +606,8 @@
           "name": "moves_profile_id_agent_profiles_id_fk",
           "tableFrom": "moves",
           "tableTo": "agent_profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -725,12 +705,8 @@
           "name": "player_seats_match_id_matches_id_fk",
           "tableFrom": "player_seats",
           "tableTo": "matches",
-          "columnsFrom": [
-            "match_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["match_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -746,10 +722,7 @@
     "public.player_color": {
       "name": "player_color",
       "schema": "public",
-      "values": [
-        "white",
-        "black"
-      ]
+      "values": ["white", "black"]
     },
     "public.ending_cause": {
       "name": "ending_cause",
@@ -766,21 +739,12 @@
     "public.match_lifecycle": {
       "name": "match_lifecycle",
       "schema": "public",
-      "values": [
-        "waiting",
-        "active",
-        "completed",
-        "expired"
-      ]
+      "values": ["waiting", "active", "completed", "expired"]
     },
     "public.match_result": {
       "name": "match_result",
       "schema": "public",
-      "values": [
-        "white",
-        "black",
-        "draw"
-      ]
+      "values": ["white", "black", "draw"]
     }
   },
   "schemas": {},
