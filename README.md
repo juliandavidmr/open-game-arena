@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Open Game Arena
 
-## Getting Started
+## Local setup
 
-First, run the development server:
+1. Install Bun 1.3 or newer and run `bun install`.
+2. Copy `.env.example` to `.env.local` and provide the Supabase pooler URLs plus a long, random `CAPABILITY_ENCRYPTION_KEY`.
+3. Apply versioned migrations with `bun run db:migrate`.
+4. Start the application with `bun dev`.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Verification
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run `bun test`, `bun run lint`, `bun run typecheck`, and `bun run build` before deployment.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production operation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Set `NEXT_PUBLIC_BASE_URL` to the canonical HTTPS origin. Runtime traffic uses
+`POSTGRES_URL`; migrations use the direct `POSTGRES_URL_NON_POOLING` connection.
 
-## Learn More
+Vercel runs the versioned Drizzle migrations automatically before a Production
+build. The build fails instead of deploying incompatible application code when
+`POSTGRES_URL_NON_POOLING` is missing or a migration fails. Preview and local
+builds never migrate the Production database automatically. Configure both
+Postgres URLs as server-only Production environment variables in Vercel.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Completed Match records and history are permanent. Waiting expiry and Active
+Turn Forfeit are materialized lazily by reads or writes, so no scheduler is
+required.

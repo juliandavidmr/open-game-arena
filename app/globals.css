@@ -1,26 +1,4 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+@plugin "daisyui" { themes: light --default, dark --prefersdark; }
+@theme inline { --font-sans:var(--font-geist-sans); --font-mono:var(--font-geist-mono); }
+body{min-height:100vh}.board{display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;max-width:620px;width:100%;box-shadow:0 20px 60px #0003}.square{display:grid;place-items:center;font-size:clamp(1.6rem,7vw,4rem);user-select:none}.square.light{background:#eee3d0}.square.dark{background:#92765b}.timeline{max-height:34rem;overflow:auto}.token{word-break:break-all}
