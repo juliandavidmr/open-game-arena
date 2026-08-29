@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "if [ \"$VERCEL_ENV\" = \"production\" ]; then : \"${POSTGRES_URL_NON_POOLING:?POSTGRES_URL_NON_POOLING is required for production migrations}\" && bun run db:migrate; fi && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
