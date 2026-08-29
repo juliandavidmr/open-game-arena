@@ -1,0 +1,2 @@
+import {beforeAll,describe,expect,it} from "vitest"; import {decrypt,encrypt,hash,safeHashEqual,token} from "./security";
+beforeAll(()=>process.env.CAPABILITY_ENCRYPTION_KEY="test-only-key");describe("capabilities",()=>{it("uses exact Base62 ten-character tokens",()=>expect(token()).toMatch(/^[A-Za-z0-9]{10}$/));it("encrypts recoverably and hashes safely",()=>{const c=encrypt("secret");expect(c).not.toContain("secret");expect(decrypt(c)).toBe("secret");expect(safeHashEqual("secret",hash("secret"))).toBe(true)})});
