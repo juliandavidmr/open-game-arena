@@ -66,16 +66,37 @@ describe("MatchView setup prompts", () => {
     expect(screen.getByText("Start the match").closest("details")?.open).toBe(true);
   });
 
-  it("tells agents exactly what to report when joining", () => {
+  it("starts each agent through a transient MCP client and keeps the loop running", () => {
     vi.stubGlobal("fetch", vi.fn());
 
     render(<MatchView token="match-token" initial={{ ...state, lifecycle: "waiting" }} />);
 
     const prompt = screen.getAllByLabelText("Complete agent prompt")[0] as HTMLTextAreaElement;
-    expect(prompt.value).toContain("exact model identifier");
+    expect(prompt.value).toContain("start now");
+    expect(prompt.value).toContain("Streamable HTTP MCP endpoint");
+    expect(prompt.value).toContain("transient MCP client");
+    expect(prompt.value).toContain("do not look for or install a local server");
+    expect(prompt.value).toContain("first tool must be game.join");
+    expect(prompt.value).toContain("exact model");
     expect(prompt.value).toContain("reasoning_effort");
-    expect(prompt.value).toContain('send "unknown"');
-    expect(prompt.value).toContain("do not use Agent A, Agent B");
+    expect(prompt.value).toContain("move → wait → move");
+    expect(prompt.value).toContain("repeat every timeout");
+    expect(prompt.value).toContain("objective is to win");
+  });
+
+  it("keeps separate White and Black Player Briefs", () => {
+    vi.stubGlobal("fetch", vi.fn());
+
+    render(<MatchView token="match-token" initial={{ ...state, lifecycle: "waiting" }} />);
+
+    const [white, black] = screen.getAllByLabelText(
+      "Complete agent prompt",
+    ) as HTMLTextAreaElement[];
+    expect(white.value).toContain("Play White");
+    expect(white.value).toContain("/chess/white-token");
+    expect(black.value).toContain("Play Black");
+    expect(black.value).toContain("/chess/black-token");
+    expect(white.value).not.toBe(black.value);
   });
 
   it("renders the match controls in Spanish", () => {

@@ -44,8 +44,8 @@ const translations = {
     colors: { white: "White", black: "Black" },
     lifecycle: { waiting: "Waiting", active: "Active", completed: "Completed" },
     draw: "Draw",
-    agentPrompt: (_agent: string, color: string, link: string) =>
-      `Play ${color} in an autonomous chess match using the Open Game Arena MCP server at ${link}. Explore the available tools and call game.get_info before acting. Then call game.join with model set to the exact model identifier running you and reasoning_effort set to your configured reasoning effort or thinking mode. If either value is unavailable, send "unknown"; do not use Agent A, Agent B, your color, role, or nickname for these fields. Use the returned agent_profile_id, inspect the state, make a legal move when it is your turn, and keep calling game.wait_for_turn until the match reaches a terminal state.`,
+    agentPrompt: (color: string, link: string) =>
+      `Play ${color} and start now. ${link} is a Streamable HTTP MCP endpoint: connect to it directly with a transient MCP client; do not look for or install a local server. After discovery, your first tool must be game.join, reporting your exact model and reasoning_effort. Follow every next_action returned by the server. Once the Match is Active, keep the rhythm move → wait → move; repeat every timeout and do not stop or ask for confirmation until the game ends. Your objective is to win the Match.`,
   },
   es: {
     breadcrumb: "Migas de pan",
@@ -85,8 +85,8 @@ const translations = {
     colors: { white: "Blancas", black: "Negras" },
     lifecycle: { waiting: "Esperando", active: "Activa", completed: "Completada" },
     draw: "Tablas",
-    agentPrompt: (_agent: string, color: string, link: string) =>
-      `Juega con ${color} una partida autónoma de ajedrez usando el servidor MCP de Open Game Arena en ${link}. Explora las herramientas disponibles y llama a game.get_info antes de actuar. Luego llama a game.join con model igual al identificador exacto del modelo que te ejecuta y reasoning_effort igual al esfuerzo de razonamiento o modo de pensamiento configurado. Si no puedes conocer alguno, envía "unknown"; no uses Agente A, Agente B, tu color, rol ni apodo en esos campos. Usa el agent_profile_id recibido, consulta el estado, realiza una jugada legal cuando sea tu turno y sigue llamando a game.wait_for_turn hasta que la partida alcance un estado final.`,
+    agentPrompt: (color: string, link: string) =>
+      `Juega con ${color} y comienza ahora. ${link} es un endpoint MCP Streamable HTTP: conéctate directamente usando un cliente MCP transitorio; no busques ni instales un servidor local. Después del discovery, tu primera herramienta debe ser game.join, enviando model y reasoning_effort exactos. Sigue cada next_action del servidor. Una vez activa la Match, mantén el ritmo jugar → esperar → jugar; repite cualquier timeout y no te detengas ni solicites confirmación hasta terminar el juego, tu objetivo es ganar la partida.`,
   },
 } as const;
 
@@ -315,7 +315,7 @@ export function MatchView({
             ].map(({ color, agent }) => {
               const link = `${baseUrl}/chess/${state.player_tokens[color]}`;
               const localizedColor = text.colors[color as "white" | "black"];
-              const prompt = text.agentPrompt(agent, localizedColor, link);
+              const prompt = text.agentPrompt(localizedColor, link);
               const ready = state.readiness[color];
               const profile = state.profiles.find((item: any) => item.color === color);
 

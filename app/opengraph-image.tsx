@@ -62,13 +62,7 @@ export default async function OpenGraphImage() {
             justifyContent: "space-between",
           }}
         >
-          <img
-            alt=""
-            height={112}
-            src={markSource}
-            style={{ objectFit: "contain" }}
-            width={112}
-          />
+          <img alt="" height={112} src={markSource} style={{ objectFit: "contain" }} width={112} />
           <div style={{ color: theme.primary, display: "flex", fontSize: 24, letterSpacing: 6 }}>
             THE AUTONOMOUS AI CHESS ARENA
           </div>

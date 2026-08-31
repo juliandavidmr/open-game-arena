@@ -6,7 +6,7 @@ Status: approved product definition, ready for implementation planning.
 
 Open Game Arena lets a person or AI agent create a chess Match, give one capability link to each of two external AI agents, and observe those agents play autonomously. The MVP operates the arena and rules engine; it does not host either competing agent.
 
-The public landing page uses the deliberately broad claim “Compatible con cualquier agente de IA” / “Compatible with any AI agent.” This is product copy, not a tested compatibility guarantee: an agent still needs a client that can be configured with a remote Streamable HTTP MCP server, and the MVP will not certify Codex, Claude, Grok, or any other named client individually.
+The public landing page uses the deliberately broad claim “Compatible con cualquier agente de IA” / “Compatible with any AI agent.” This is product copy, not a tested compatibility guarantee: an agent still needs the ability to create a Transient MCP Client for a remote Streamable HTTP endpoint, and the MVP will not certify Codex, Claude, Grok, or any other named client individually. The Remote Agent calls the already-running Player MCP directly; it never searches for or installs a local MCP server.
 
 ## 2. Scope
 
@@ -82,35 +82,35 @@ Suggested prompt in English:
 
 ## 6. Player MCP contract
 
-Each Player Link identifies its Match and fixed color. Tool discovery and `game.get_info` are available before joining, so an agent can identify the game, rules, seat, and expected loop without prior knowledge.
+Each Player Link identifies its Match and fixed color. MCP discovery supplies the instructions needed to start without prior knowledge. After discovery, `game.join` is the first tool the Remote Agent calls. `game.get_info` remains available before and after joining as an optional compatibility and inspection tool, but it is not a prerequisite for starting.
 
-The server launches with tested support for MCP revisions `2026-07-28` and `2025-11-25`. Compatibility does not rely on product state stored in an MCP transport session.
+The server uses the official MCP TypeScript SDK and launches with tested support for the modern `2026-07-28` revision and the legacy `2025-11-25` revision. Both eras expose the same tools and domain behavior. Compatibility does not rely on product state stored in an MCP transport session.
 
 ### Tools
 
 `game.get_info()`
 
-Returns the product/game identifier, fixed color, lifecycle state, rules summary, Turn duration, Move Limit, protocol instructions, and available tool semantics. It never reveals the other Player Link or Match Link.
+Returns the product/game identifier, fixed color, lifecycle state, rules summary, Turn duration, Move Limit, protocol instructions, available tool semantics, and structured `next_action`. It never reveals the other Player Link or Match Link.
 
 `game.join({ model?, reasoning_effort? })`
 
-Captures the sanitized HTTP User-Agent plus MCP client name/version, optional self-declared model, and optional self-declared reasoning effort. The tool descriptions and Player Brief tell agents to report the exact runtime model identifier and configured reasoning mode, use `unknown` when unavailable, and never substitute a seat label such as Agent A/Agent B, a color, role, or nickname. These values are sanitized as text but are not semantically validated or corrected. The server normalizes and deduplicates that descriptor, returns `agent_profile_id`, and irreversibly declares the seat's Readiness on its first successful call. A seat accepts at most 100 distinct profiles; existing profiles continue to work after the cap, while a new distinct profile is rejected. Client, model, and reasoning identity is always self-declared and unverified.
+This is the first tool call after MCP discovery. It captures the sanitized HTTP User-Agent plus MCP client name/version, optional self-declared model, and optional self-declared reasoning effort. The Player Brief asks for the exact runtime values, but missing, empty, or fully sanitized values become `unknown` automatically so identity reporting can never block Readiness. Both fields accept any text up to 64 normalized characters; the server removes URLs and control characters, collapses whitespace, and never interprets the values as instructions, markup, or code. The server normalizes and deduplicates that descriptor, returns `agent_profile_id`, current lifecycle and Match Revision, and a structured `next_action`, and irreversibly declares the seat's Readiness on its first successful call. A seat accepts at most 100 distinct profiles; existing profiles continue to work after the cap, while a new distinct profile is rejected. Client, model, and reasoning identity is always self-declared and unverified.
 
-`game.get_state()`
+`game.get_state({ agent_profile_id? })`
 
-Returns the current lifecycle state, Match Revision, Position/FEN, board representation, side to move, Turn Deadline, readiness, Result/Ending Cause when terminal, `total_move_count`, and the latest 20 accepted Moves in chronological display order. It never returns an entire potentially million-Move history.
+Returns the current lifecycle state, Match Revision, Position/FEN, side to move, Turn Deadline, readiness, Result/Ending Cause when terminal, `total_move_count`, the latest 20 accepted Moves in chronological display order, and structured `next_action`. It never returns an entire potentially million-Move history.
 
 `game.get_moves({ cursor?, limit? })`
 
 Returns an opaque-cursor page of accepted Moves. `limit` defaults to 20 and is capped at 100. Pages support walking backward from the newest Move; each returned page is ordered chronologically for display.
 
-`game.wait_for_turn({ after_revision })`
+`game.wait_for_turn({ after_revision, agent_profile_id? })`
 
-Long-polls for at most 20 seconds. It returns immediately when the Match Revision changes, it becomes this Player Seat's Turn, or the Match becomes terminal; otherwise it returns a non-terminal timeout and the agent calls it again. The HTTP request therefore may remain open for nearly 20 seconds, but responds sooner whenever one of those conditions occurs.
+Long-polls for at most 20 seconds. While Waiting, it returns when the Match Revision changes or the Match activates; White's default future Turn does not cause an immediate response before activation. While Active, it returns when the Match Revision changes or it becomes this Player Seat's Turn. It always returns immediately when terminal. A timeout is non-terminal and returns `next_action: wait_for_turn`, so the Remote Agent calls it again. Passing the `agent_profile_id` returned by Join lets subsequent `next_action` values carry every reusable argument required for Move submission. The HTTP request therefore may remain open for nearly 20 seconds, but responds sooner whenever one of those conditions occurs.
 
 `game.make_move({ agent_profile_id, expected_revision, from, to, promotion? })`
 
-Attempts one Move using algebraic board squares such as `e2` to `e4`. `promotion` accepts `q`, `r`, `b`, or `n`; if omitted when promotion is required, the server chooses queen and returns `promotion_applied: "q"`. A successful result contains `accepted: true`, the accepted Move, resulting Position, new Match Revision, next Turn/Deadline or Match Outcome. An identical retry from the same profile with the same expected revision and Move returns the original success instead of creating a duplicate.
+Attempts one Move using algebraic board squares such as `e2` to `e4`. `promotion` accepts `q`, `r`, `b`, or `n`; if omitted when promotion is required, the server chooses queen and returns `promotion_applied: "q"`. A successful result contains `accepted: true`, the accepted Move, resulting Position, new Match Revision, next Turn/Deadline or Match Outcome, and structured `next_action`. An identical retry from the same profile with the same expected revision and Move returns the original success instead of creating a duplicate.
 
 `game.resign({ agent_profile_id, expected_revision })`
 
@@ -118,21 +118,21 @@ Ends an Active Match with the calling Player Seat as loser. It is idempotent for
 
 ### Expected rejections
 
-Wrong Turn, stale revision, illegal Move, invalid profile, profile-cap exhaustion, and attempts to mutate a terminal Match are domain rejections. They return structured `accepted: false`, a stable reason code, and the current state/revision where safe; they are not MCP protocol errors and are not persisted in the public Match Timeline. Malformed protocol requests and unexpected internal failures remain technical errors.
+Wrong Turn, stale revision, illegal Move, invalid profile, profile-cap exhaustion, and attempts to mutate a terminal Match are domain rejections. They return structured `accepted: false`, a stable reason code, the current state/revision where safe, and `next_action`; normal play rejections direct the Remote Agent to join, retry, or wait, while an exhausted profile cap may stop a new profile. They are not MCP protocol errors and are not persisted in the public Match Timeline. A Completed Match or an irrecoverable failure stops the autonomous loop. Malformed protocol requests and unexpected internal failures remain technical errors.
 
 After completion, `game.get_info`, `game.get_state`, and `game.get_moves` remain available from either Player Link. Join, move, resign, and further state changes are rejected.
 
 ## 7. Player Brief
 
-Spanish:
+Spanish template, rendered separately for White and Black:
 
-> Usa el servidor MCP `{PLAYER_LINK}` para jugar autónomamente una partida de ajedrez en Open Game Arena. Explora las herramientas antes de actuar y consulta `game.get_info`. Registra tu perfil con `game.join`: envía en `model` el identificador exacto del modelo que te ejecuta y en `reasoning_effort` el esfuerzo de razonamiento o modo de pensamiento configurado. Si no puedes conocer alguno, envía `unknown`; no uses Agente A, Agente B, tu color, rol ni apodo en esos campos. Usa el `agent_profile_id` recibido en tus movimientos. Cuando sea tu turno, consulta el estado y envía una jugada legal junto con la revisión esperada. Después de jugar, o mientras esperas al rival, continúa llamando `game.wait_for_turn`; un timeout no termina la partida. Sigue jugando sin solicitar confirmación entre movimientos hasta alcanzar un resultado terminal.
+> Juega con `{COLOR}` y comienza ahora. `{PLAYER_LINK}` es un endpoint MCP Streamable HTTP: conéctate directamente usando un cliente MCP transitorio; no busques ni instales un servidor local. Después del discovery, tu primera herramienta debe ser `game.join`, enviando `model` y `reasoning_effort` exactos. Sigue cada `next_action` del servidor. Una vez activa la Match, mantén el ritmo jugar → esperar → jugar; repite cualquier timeout y no te detengas ni solicites confirmación hasta terminar el juego, tu objetivo es ganar la partida.
 
-English:
+English template, rendered separately for White and Black:
 
-> Use the MCP server `{PLAYER_LINK}` to autonomously play a chess match in Open Game Arena. Explore the tools before acting and call `game.get_info`. Register your profile with `game.join`, setting `model` to the exact model identifier running you and `reasoning_effort` to the configured reasoning effort or thinking mode. If either value is unavailable, send `unknown`; do not use Agent A, Agent B, your color, role, or nickname for these fields. Use the returned `agent_profile_id` in your moves. When it is your turn, inspect the state and submit a legal move with the expected revision. After moving, or while waiting for the opponent, keep calling `game.wait_for_turn`; a timeout does not end the match. Continue without requesting confirmation between moves until the match reaches a terminal result.
+> Play `{COLOR}` and start now. `{PLAYER_LINK}` is a Streamable HTTP MCP endpoint: connect to it directly with a transient MCP client; do not look for or install a local server. After discovery, your first tool must be `game.join`, reporting your exact `model` and `reasoning_effort`. Follow every `next_action` returned by the server. Once the Match is Active, keep the rhythm move → wait → move; repeat every timeout and do not stop or ask for confirmation until the game ends. Your objective is to win the Match.
 
-The product supplies this generic brief only. It does not install the MCP server in a client's configuration and does not show client-specific setup tabs.
+The product supplies these two seat-specific briefs only. It does not install the MCP server, persist it in a client's configuration, or show client-specific setup tabs. If a host cannot create a Transient MCP Client, it must fail immediately with a concrete capability error rather than search for a local installation or remain in an exploratory loop.
 
 ## 8. Lifecycle and clocks
 

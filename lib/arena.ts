@@ -7,6 +7,7 @@ import {
   normalizeProfile,
   opposite,
   outcome,
+  playerNextAction,
   TURN_MS,
   WAIT_MS,
   type Color,
@@ -17,7 +18,13 @@ import { agentProfiles, matches, playerSeats } from "./schema";
 import { siteUrl } from "./site";
 type Clock = () => Date;
 const now: Clock = () => new Date();
-export type Rejection = { accepted: false; reason: string; revision?: number; lifecycle?: string };
+export type Rejection = {
+  accepted: false;
+  reason: string;
+  revision?: number;
+  lifecycle?: string;
+  next_action: ReturnType<typeof playerNextAction>;
+};
 const unavailable = () => Object.assign(new Error("Unavailable"), { code: "UNAVAILABLE" });
 export function matchUrls(tokens: { match: string; white: string; black: string }) {
   return {
@@ -133,7 +140,8 @@ export async function getPlayer(token: string, clock: Clock = now) {
     let m = await byPlayer(tx, token, true);
     m = await materialize(tx, m, clock);
     if (m.lifecycle === "expired") throw unavailable();
-    return { ...(await stateFor(tx, m)), color: m.seat_color };
+    const state = { ...(await stateFor(tx, m)), color: m.seat_color };
+    return { ...state, next_action: playerNextAction(state) };
   });
 }
 export async function getObserver(token: string, clock: Clock = now) {
@@ -164,6 +172,12 @@ export async function join(
         reason: "terminal_match",
         revision: Number(m.revision),
         lifecycle: m.lifecycle,
+        next_action: playerNextAction({
+          lifecycle: m.lifecycle,
+          revision: Number(m.revision),
+          turn: m.turn,
+          color: m.seat_color,
+        }),
       };
     const p = normalizeProfile(input);
     let [profile] =
@@ -172,26 +186,81 @@ export async function join(
       const [{ count }] =
         await tx`SELECT count(*)::int count FROM agent_profiles WHERE seat_id=${m.seat_id}`;
       if (count >= 100)
-        return { accepted: false, reason: "profile_cap", revision: Number(m.revision) };
+        return {
+          accepted: false,
+          reason: "profile_cap",
+          revision: Number(m.revision),
+          lifecycle: m.lifecycle,
+          next_action: { type: "stop", tool: null, arguments: {} } as const,
+        };
       [profile] =
         await tx`INSERT INTO agent_profiles(seat_id,fingerprint,client_name,client_version,model,reasoning_effort,user_agent,first_seen_at) VALUES(${m.seat_id},${p.fingerprint},${p.clientName},${p.clientVersion},${p.model},${p.reasoningEffort},${p.userAgent},${clock()}) RETURNING id`;
     }
     if (!m.seat_ready) {
       const n = clock();
+      const readinessRevision = Number(m.revision) + 1;
       await tx`UPDATE player_seats SET ready=true WHERE id=${m.seat_id}`;
       const [{ count }] =
         await tx`SELECT count(*)::int count FROM player_seats WHERE match_id=${m.id} AND (ready OR id=${m.seat_id})`;
       if (count === 2) {
-        await tx`UPDATE matches SET lifecycle='active',revision=revision+1,activated_at=${n},turn='white',turn_deadline=${new Date(+n + TURN_MS)},waiting_expires_at=${new Date(+n + WAIT_MS)} WHERE id=${m.id}`;
-      } else
-        await tx`UPDATE matches SET revision=revision+1,waiting_expires_at=${new Date(+n + WAIT_MS)} WHERE id=${m.id}`;
-      await tx`INSERT INTO match_events(match_id,revision,type,color,created_at) VALUES(${m.id},${Number(m.revision) + 1},'readiness',${m.seat_color},${n})`;
+        const turnDeadline = new Date(+n + TURN_MS);
+        await tx`UPDATE matches SET lifecycle='active',revision=revision+1,activated_at=${n},turn='white',turn_deadline=${turnDeadline},waiting_expires_at=${new Date(+n + WAIT_MS)} WHERE id=${m.id}`;
+        m = {
+          ...m,
+          lifecycle: "active",
+          revision: readinessRevision,
+          activated_at: n,
+          turn: "white",
+          turn_deadline: turnDeadline,
+        };
+      } else {
+        const waitingExpiresAt = new Date(+n + WAIT_MS);
+        await tx`UPDATE matches SET revision=revision+1,waiting_expires_at=${waitingExpiresAt} WHERE id=${m.id}`;
+        m = {
+          ...m,
+          revision: readinessRevision,
+          waiting_expires_at: waitingExpiresAt,
+        };
+      }
+      await tx`INSERT INTO match_events(match_id,revision,type,color,created_at) VALUES(${m.id},${readinessRevision},'readiness',${m.seat_color},${n})`;
     }
-    return { accepted: true, agent_profile_id: profile.id };
+    return {
+      accepted: true,
+      agent_profile_id: profile.id,
+      lifecycle: m.lifecycle,
+      revision: Number(m.revision),
+      next_action: playerNextAction(
+        {
+          lifecycle: m.lifecycle,
+          revision: Number(m.revision),
+          turn: m.turn,
+          color: m.seat_color,
+        },
+        profile.id,
+      ),
+    };
   });
 }
-function reject(m: any, reason: string): Rejection {
-  return { accepted: false, reason, revision: Number(m.revision), lifecycle: m.lifecycle };
+function reject(m: any, reason: string, agentProfileId?: string): Rejection {
+  const nextAction =
+    reason === "invalid_profile"
+      ? ({ type: "join", tool: "game.join", arguments: {} } as const)
+      : playerNextAction(
+          {
+            lifecycle: m.lifecycle,
+            revision: Number(m.revision),
+            turn: m.turn,
+            color: m.seat_color,
+          },
+          agentProfileId,
+        );
+  return {
+    accepted: false,
+    reason,
+    revision: Number(m.revision),
+    lifecycle: m.lifecycle,
+    next_action: nextAction,
+  };
 }
 export async function makeMove(
   t: string,
@@ -211,14 +280,16 @@ export async function makeMove(
     const [retry] =
       await tx`SELECT response FROM idempotency WHERE match_id=${m.id} AND profile_id=${input.agent_profile_id} AND revision=${input.expected_revision} AND kind='move' AND fingerprint=${fp}`;
     if (retry) return retry.response;
-    if (m.lifecycle !== "active") return reject(m, "terminal_match");
-    if (Number(m.revision) !== input.expected_revision) return reject(m, "stale_revision");
-    if (m.turn !== m.seat_color) return reject(m, "wrong_turn");
+    if (m.lifecycle !== "active")
+      return reject(m, m.lifecycle === "waiting" ? "match_not_active" : "terminal_match");
+    if (Number(m.revision) !== input.expected_revision)
+      return reject(m, "stale_revision", input.agent_profile_id);
+    if (m.turn !== m.seat_color) return reject(m, "wrong_turn", input.agent_profile_id);
     const [profile] =
       await tx`SELECT id FROM agent_profiles WHERE id=${input.agent_profile_id} AND seat_id=${m.seat_id}`;
     if (!profile) return reject(m, "invalid_profile");
     const applied = applyChessMove(m.fen, input.from, input.to, input.promotion);
-    if (!applied.ok) return reject(m, "illegal_move");
+    if (!applied.ok) return reject(m, "illegal_move", input.agent_profile_id);
     const n = clock(),
       rev = Number(m.revision) + 1,
       ply = m.move_count + 1;
@@ -229,6 +300,9 @@ export async function makeMove(
       move: { ply, from: input.from, to: input.to, promotion: applied.promotion, san: applied.san },
       fen: applied.fen,
       revision: rev,
+      lifecycle: cause ? "completed" : "active",
+      turn: opposite(m.turn),
+      turn_deadline: cause ? null : new Date(+n + TURN_MS),
       promotion_applied: !input.promotion && applied.promotion ? "q" : undefined,
     };
     await tx`UPDATE matches SET fen=${applied.fen},revision=${rev},move_count=${ply},turn=${opposite(m.turn)},turn_deadline=${cause ? null : new Date(+n + TURN_MS)} WHERE id=${m.id}`;
@@ -247,6 +321,15 @@ export async function makeMove(
       response.ending_cause = cause;
       response.revision = done.revision;
     }
+    response.next_action = playerNextAction(
+      {
+        lifecycle: response.lifecycle,
+        revision: response.revision,
+        turn: response.turn,
+        color: m.seat_color,
+      },
+      input.agent_profile_id,
+    );
     await tx`INSERT INTO idempotency(match_id,profile_id,revision,kind,fingerprint,response) VALUES(${m.id},${profile.id},${input.expected_revision},'move',${fp},${tx.json(response)})`;
     return response;
   });
@@ -262,8 +345,10 @@ export async function resign(
     const [retry] =
       await tx`SELECT response FROM idempotency WHERE match_id=${m.id} AND profile_id=${input.agent_profile_id} AND revision=${input.expected_revision} AND kind='resign'`;
     if (retry) return retry.response;
-    if (m.lifecycle !== "active") return reject(m, "terminal_match");
-    if (Number(m.revision) !== input.expected_revision) return reject(m, "stale_revision");
+    if (m.lifecycle !== "active")
+      return reject(m, m.lifecycle === "waiting" ? "match_not_active" : "terminal_match");
+    if (Number(m.revision) !== input.expected_revision)
+      return reject(m, "stale_revision", input.agent_profile_id);
     const [p] =
       await tx`SELECT id FROM agent_profiles WHERE id=${input.agent_profile_id} AND seat_id=${m.seat_id}`;
     if (!p) return reject(m, "invalid_profile");
@@ -274,6 +359,7 @@ export async function resign(
       revision: done.revision,
       result: done.result,
       ending_cause: "resignation",
+      next_action: { type: "stop", tool: null, arguments: {} } as const,
     };
     await tx`INSERT INTO idempotency(match_id,profile_id,revision,kind,fingerprint,response) VALUES(${m.id},${p.id},${input.expected_revision},'resign','',${tx.json(response)})`;
     return response;

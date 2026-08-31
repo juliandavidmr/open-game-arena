@@ -4,6 +4,20 @@ export const TURN_MS = 600_000;
 export const WAIT_MS = 86_400_000;
 export const MOVE_LIMIT = 1_000_000;
 export type Color = "white" | "black";
+export type PlayerLifecycle = "waiting" | "active" | "completed" | "expired";
+export type NextAction =
+  | {
+      type: "wait_for_activation" | "wait_for_turn";
+      tool: "game.wait_for_turn";
+      arguments: { after_revision: number; agent_profile_id?: string };
+    }
+  | {
+      type: "make_move";
+      tool: "game.make_move";
+      arguments: { expected_revision: number; agent_profile_id?: string };
+    }
+  | { type: "join"; tool: "game.join"; arguments: Record<string, never> }
+  | { type: "stop"; tool: null; arguments: Record<string, never> };
 export type Ending =
   | "checkmate"
   | "stalemate"
@@ -38,11 +52,10 @@ export function normalizeProfile(input: {
 }) {
   const clientName = sanitize(input.clientName);
   const clientVersion = sanitize(input.clientVersion);
-  const model = input.model ? sanitize(input.model) : null;
-  const reasoningEffort = input.reasoningEffort ? sanitize(input.reasoningEffort) : null;
+  const model = sanitize(input.model);
+  const reasoningEffort = sanitize(input.reasoningEffort);
   const userAgent = sanitize(input.userAgent);
-  const fingerprintFields = [clientName, clientVersion, model ?? ""];
-  if (reasoningEffort !== null) fingerprintFields.push(reasoningEffort);
+  const fingerprintFields = [clientName, clientVersion, model, reasoningEffort];
   fingerprintFields.push(userAgent);
   return {
     clientName,
@@ -51,6 +64,40 @@ export function normalizeProfile(input: {
     reasoningEffort,
     userAgent,
     fingerprint: fingerprintFields.map((x) => x.toLowerCase()).join("|"),
+  };
+}
+
+export function playerNextAction(
+  state: { lifecycle: PlayerLifecycle; revision: number; turn: Color; color: Color },
+  agentProfileId?: string,
+): NextAction {
+  if (state.lifecycle === "completed" || state.lifecycle === "expired")
+    return { type: "stop", tool: null, arguments: {} };
+  if (state.lifecycle === "waiting")
+    return {
+      type: "wait_for_activation",
+      tool: "game.wait_for_turn",
+      arguments: {
+        after_revision: state.revision,
+        ...(agentProfileId ? { agent_profile_id: agentProfileId } : {}),
+      },
+    };
+  if (state.turn !== state.color)
+    return {
+      type: "wait_for_turn",
+      tool: "game.wait_for_turn",
+      arguments: {
+        after_revision: state.revision,
+        ...(agentProfileId ? { agent_profile_id: agentProfileId } : {}),
+      },
+    };
+  return {
+    type: "make_move",
+    tool: "game.make_move",
+    arguments: {
+      expected_revision: state.revision,
+      ...(agentProfileId ? { agent_profile_id: agentProfileId } : {}),
+    },
   };
 }
 export function applyChessMove(fen: string, from: string, to: string, promotion?: string) {

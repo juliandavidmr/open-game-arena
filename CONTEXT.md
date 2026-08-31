@@ -61,12 +61,16 @@ The capability that grants control of exactly one Player Seat while a Match is i
 _Avoid_: Match Link, Agent Profile
 
 **Player Brief**:
-The localized, seat-specific instruction paired with a Player Link for starting a Remote Agent.
+One of two localized, seat-specific instructions generated for a Match and paired with its corresponding Player Link for starting a Remote Agent. The White and Black Player Briefs remain separate in the interface.
 _Avoid_: Strategy, private prompt
 
 **Remote Agent**:
 An externally operated AI agent that plays through a Player Seat's capabilities. Multiple Remote Agents may share one Player Seat.
 _Avoid_: Hosted agent, anonymous opponent
+
+**Transient MCP Client**:
+A client created by a Remote Agent for the duration of its run to call a remote Player MCP directly, without installing the server or persisting it in the host's MCP configuration.
+_Avoid_: Installed MCP server, hosted agent
 
 **Agent Profile**:
 An unverified, normalized technical descriptor observed when a Remote Agent declares Readiness. Equal descriptors collapse into one Agent Profile, irrespective of how many Remote Agents supplied them.
