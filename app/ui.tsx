@@ -20,6 +20,7 @@ const resources = {
       directory: "Completed Matches",
       load: "Load more",
       winner: "Winner",
+      winningAgent: "Winning agent",
       whiteAgents: "White agents",
       blackAgents: "Black agents",
       cause: "Ending Cause",
@@ -64,6 +65,7 @@ const resources = {
       directory: "Matches completadas",
       load: "Cargar más",
       winner: "Ganador",
+      winningAgent: "Agente ganador",
       whiteAgents: "Agentes de blancas",
       blackAgents: "Agentes de negras",
       cause: "Causa final",
@@ -117,6 +119,76 @@ type MatchDirectory = {
   next_cursor: string | null;
 };
 
+function isKnown(value: unknown): value is string {
+  return (
+    typeof value === "string" && value.trim() !== "" && value.trim().toLowerCase() !== "unknown"
+  );
+}
+
+function formatRelativeDate(date: string | Date, now: number, language: string) {
+  const elapsedSeconds = Math.round((+new Date(date) - now) / 1000);
+  const absoluteSeconds = Math.abs(elapsedSeconds);
+  const formatter = new Intl.RelativeTimeFormat(language, { numeric: "auto" });
+
+  if (absoluteSeconds < 60) return formatter.format(elapsedSeconds, "second");
+  if (absoluteSeconds < 3600) return formatter.format(Math.round(elapsedSeconds / 60), "minute");
+  if (absoluteSeconds < 86400) return formatter.format(Math.round(elapsedSeconds / 3600), "hour");
+  if (absoluteSeconds < 2592000) return formatter.format(Math.round(elapsedSeconds / 86400), "day");
+  if (absoluteSeconds < 31536000)
+    return formatter.format(Math.round(elapsedSeconds / 2592000), "month");
+  return formatter.format(Math.round(elapsedSeconds / 31536000), "year");
+}
+
+function formatFullDate(date: string | Date, language: string, timeZone?: string) {
+  return new Intl.DateTimeFormat(language, {
+    dateStyle: "full",
+    timeStyle: "long",
+    timeZone,
+  }).format(new Date(date));
+}
+
+function formatShortDate(date: string | Date, language: string) {
+  return new Intl.DateTimeFormat(language, {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(date));
+}
+
+function CompletedAt({
+  date,
+  language,
+  now,
+}: {
+  date: string | Date;
+  language: string;
+  now?: number;
+}) {
+  const [currentTime, setCurrentTime] = useState(now);
+
+  useEffect(() => {
+    if (now !== undefined) return;
+    const timer = window.setTimeout(() => setCurrentTime(new Date().getTime()), 0);
+    return () => window.clearTimeout(timer);
+  }, [now]);
+
+  return (
+    <time
+      className="tooltip"
+      dateTime={new Date(date).toISOString()}
+      data-tip={formatFullDate(date, language, currentTime === undefined ? "UTC" : undefined)}
+    >
+      {currentTime === undefined
+        ? formatShortDate(date, language)
+        : formatRelativeDate(date, currentTime, language)}
+    </time>
+  );
+}
+
+function formatLabel(value: string) {
+  const label = value.replaceAll("_", " ");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function formatDuration(activatedAt: string, completedAt: string) {
   const totalSeconds = Math.max(
     0,
@@ -131,21 +203,51 @@ function formatDuration(activatedAt: string, completedAt: string) {
     .join(" ");
 }
 
-function AgentProfiles({ profiles }: { profiles?: any[] }) {
-  if (!profiles?.length) return <span className="text-base-content/50">—</span>;
+function AgentProfiles({
+  profiles,
+  winner = false,
+  winnerLabel,
+}: {
+  profiles?: any[];
+  winner?: boolean;
+  winnerLabel: string;
+}) {
+  if (!profiles?.length)
+    return (
+      <span className="text-base-content/50">
+        {winner && (
+          <span aria-label={winnerLabel} role="img">
+            🏆
+          </span>
+        )}{" "}
+        —
+      </span>
+    );
 
   return (
     <div className="flex flex-col gap-1">
-      {profiles.slice(0, 2).map((profile, index) => (
-        <span
-          className="max-w-52 truncate"
-          key={`${profile.client_name}-${profile.model}-${profile.reasoning_effort}-${index}`}
-        >
-          {profile.client_name}
-          {profile.model ? ` · ${profile.model}` : ""}
-          {profile.reasoning_effort ? ` · ${profile.reasoning_effort}` : ""}
-        </span>
-      ))}
+      {profiles.slice(0, 2).map((profile, index) => {
+        const description = [profile.client_name, profile.model, profile.reasoning_effort]
+          .filter(isKnown)
+          .map((value) => value.trim())
+          .join(" · ");
+
+        return (
+          <span
+            className={description ? "max-w-52 truncate" : "text-base-content/50"}
+            key={`${profile.client_name}-${profile.model}-${profile.reasoning_effort}-${index}`}
+          >
+            {winner && index === 0 && (
+              <>
+                <span aria-label={winnerLabel} role="img">
+                  🏆
+                </span>{" "}
+              </>
+            )}
+            {description || "—"}
+          </span>
+        );
+      })}
       {profiles.length > 2 && (
         <span className="text-xs font-semibold text-base-content/60">+{profiles.length - 2}</span>
       )}
@@ -156,9 +258,11 @@ function AgentProfiles({ profiles }: { profiles?: any[] }) {
 export function ArenaHome({
   language,
   initialDirectory,
+  now,
 }: {
   language: string;
   initialDirectory?: MatchDirectory;
+  now?: number;
 }) {
   const { t, i18n } = useTranslation();
   const [busy, setBusy] = useState(false),
@@ -253,17 +357,25 @@ export function ArenaHome({
                     <tr key={m.public_slug}>
                       <td>
                         <a className="link" href={`/match/${m.public_slug}`}>
-                          {new Date(m.completed_at).toLocaleString()}
+                          <CompletedAt date={m.completed_at} language={language} now={now} />
                         </a>
                       </td>
                       <td>
-                        <AgentProfiles profiles={m.white_profiles} />
+                        <AgentProfiles
+                          profiles={m.white_profiles}
+                          winner={m.result === "white"}
+                          winnerLabel={t("winningAgent")}
+                        />
                       </td>
                       <td>
-                        <AgentProfiles profiles={m.black_profiles} />
+                        <AgentProfiles
+                          profiles={m.black_profiles}
+                          winner={m.result === "black"}
+                          winnerLabel={t("winningAgent")}
+                        />
                       </td>
                       <td className="font-semibold capitalize">{m.result}</td>
-                      <td>{m.ending_cause}</td>
+                      <td>{formatLabel(m.ending_cause)}</td>
                       <td className="whitespace-nowrap font-mono">
                         {formatDuration(m.activated_at, m.completed_at)}
                       </td>
